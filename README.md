@@ -10,8 +10,8 @@ A lean Linux gaming image for desktop PCs, built on [Bazzite](https://bazzite.gg
 Both work with AMD and Intel CPUs, desktops and laptops. Picked the wrong one? Gaming PC Setup notices and offers to switch.
 
 - **Boots into Steam Big Picture** like a Steam Deck. **Switch to Desktop** in the power menu opens a full KDE desktop.
-- **Uses the PC's own hardware:** AMD graphics through the Mesa drivers built into Linux, Bazzite's gaming kernel, Gamescope, GameMode and the sched-ext CPU schedulers. Windows games run through **Proton** in Steam.
-- **No bloat, full hardware support:** `build_files/build.sh` removes extras a gaming PC doesn't need (Android container, VPN, web admin console, disc ripper, CJK input methods, Steam Deck-only parts) and adds drivers for a wide range of hardware (see [Drivers](#drivers)). A package is only removed when nothing else depends on it, so the gaming stack stays intact.
+- **Uses the PC's own hardware:** AMD graphics through the Mesa drivers built into Linux, Bazzite's gaming kernel, Gamescope and the sched-ext CPU schedulers. Windows games run through **Proton** in Steam.
+- **No bloat, full hardware support:** `build_files/build.sh` removes extras a gaming PC doesn't need (Android container (or switches it off where other parts depend on it), VPN, web admin console, disc ripper, CJK input methods, Steam Deck-only parts) and adds drivers for a wide range of hardware (see [Drivers](#drivers)). A package is only removed when nothing else depends on it, so the gaming stack stays intact.
 - **Safe updates:** the system is image-based. GitHub rebuilds the image every day from the latest Bazzite, the PC updates in the background, and the previous version stays in the boot menu if an update misbehaves.
 
 ## Install

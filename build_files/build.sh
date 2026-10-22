@@ -80,6 +80,8 @@ for pkg in "${DRIVERS[@]}"; do
   dnf5 install -y --skip-unavailable "$pkg" || echo "Skipped $pkg (conflict or not available)"
 done
 systemctl enable thermald.service 2> /dev/null || true
+# If the Android container could not be removed (other packages depend on it), keep it switched off
+systemctl disable waydroid-container.service 2> /dev/null || true
 systemctl enable ratbagd.service 2> /dev/null || true
 
 # Hardware tools used by gaming-setup and handy for troubleshooting
