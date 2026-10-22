@@ -1,0 +1,244 @@
+#!/usr/bin/bash
+# Gaming PC Setup: checks every piece of hardware, fixes common problems and
+# installs gaming integrations. Safe to run again at any time.
+#
+#   gaming-setup              full setup (hardware check, fixes, integrations)
+#   gaming-setup --report     hardware check only
+#   gaming-setup --first-run  run once on first login (skips if already done)
+#   gaming-setup --no-gui     use the terminal instead of dialogs
+
+set -u
+
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/gaming-setup"
+REPORT="$HOME/Gaming-Setup-Report.txt"
+MODE="full"
+GUI=1
+
+for arg in "$@"; do
+  case "$arg" in
+    --report) MODE="report" ;;
+    --first-run) MODE="first-run" ;;
+    --no-gui) GUI=0 ;;
+    -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+  esac
+done
+
+if [ "$(id -u)" -eq 0 ]; then
+  echo "Run gaming-setup as your normal user, not with sudo." >&2
+  exit 1
+fi
+
+if [ "$MODE" = "first-run" ] && [ -f "$STATE_DIR/done" ]; then
+  exit 0
+fi
+
+if [ "$GUI" -eq 1 ] && { [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || ! command -v zenity > /dev/null; }; then
+  GUI=0
+fi
+
+WARNINGS=()
+ok()   { printf '  OK    %s\n' "$*"; }
+warn() { printf '  WARN  %s\n' "$*"; WARNINGS+=("$*"); }
+info() { printf '        %s\n' "$*"; }
+head1() { printf '\n== %s\n' "$*"; }
+have() { command -v "$1" > /dev/null 2>&1; }
+
+ask() { # ask "question" -> 0 for yes
+  if [ "$GUI" -eq 1 ]; then
+    zenity --question --title="Gaming PC Setup" --width=420 --text="$1" 2> /dev/null
+  else
+    local a; read -r -p "$1 [y/N] " a; [[ "$a" =~ ^[YyJj] ]]
+  fi
+}
+
+# ---------------------------------------------------------------- hardware check
+hardware_report() {
+  echo "Gaming PC Setup report - $(date '+%Y-%m-%d %H:%M')"
+
+  head1 "System"
+  info "$(. /etc/os-release; echo "${PRETTY_NAME:-Linux}")"
+  info "Image: $(bootc status --format=json 2> /dev/null | grep -o '"image":"[^"]*"' | head -1 | cut -d'"' -f4)"
+  info "Kernel: $(uname -r)"
+
+  head1 "Processor"
+  info "$(lscpu | sed -n 's/^Model name:[[:space:]]*//p' | head -1) ($(nproc) threads)"
+  if [ -r /sys/devices/system/cpu/amd_pstate/status ]; then
+    ok "AMD P-State power management: $(cat /sys/devices/system/cpu/amd_pstate/status)"
+  elif grep -qi amd /proc/cpuinfo; then
+    warn "AMD P-State is not active (older CPU or disabled in BIOS: enable CPPC in the BIOS)"
+  fi
+  info "Power profile: $(powerprofilesctl get 2> /dev/null || cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2> /dev/null)"
+  info "Memory: $(free -h | awk '/^Mem:/ {print $2}') RAM, swap: $(free -h | awk '/^Swap:/ {print $2}')"
+
+  head1 "Graphics"
+  local found_gpu=0
+  while IFS= read -r line; do
+    found_gpu=1
+    slot="${line%% *}"
+    name="$(lspci -s "$slot" | cut -d' ' -f2- | sed 's/^[^:]*: //')"
+    drv="$(lspci -k -s "$slot" | sed -n 's/.*Kernel driver in use: //p')"
+    if [ -n "$drv" ]; then ok "$name -> driver: $drv"; else warn "$name has no driver loaded"; fi
+  done < <(lspci -D | grep -Ei 'VGA|3D controller|Display controller')
+  [ "$found_gpu" -eq 1 ] || warn "No graphics card found"
+  if have vulkaninfo; then
+    vk="$(vulkaninfo --summary 2> /dev/null | sed -n 's/.*deviceName *= *//p' | grep -vi llvmpipe | head -3 | paste -sd ', ')"
+    if [ -n "$vk" ]; then ok "Vulkan (used by Proton/DXVK): $vk"; else warn "No hardware Vulkan device (games will be slow)"; fi
+  fi
+  if [ -e /sys/module/amdgpu ]; then
+    ok "AMD graphics driver (amdgpu) loaded"
+  fi
+
+  head1 "Displays"
+  for c in /sys/class/drm/card*-*/status; do
+    [ -r "$c" ] || continue
+    [ "$(cat "$c")" = "connected" ] || continue
+    port="$(basename "$(dirname "$c")" | sed 's/^card[0-9]*-//')"
+    modes="$(head -1 "$(dirname "$c")/modes" 2> /dev/null)"
+    ok "$port connected ${modes:+(best mode $modes)}"
+  done
+
+  head1 "Audio"
+  if have wpctl; then
+    sinks="$(wpctl status 2> /dev/null | awk '/Sinks:/{f=1;next} /Sources:/{f=0} f && /[0-9]+\./' | sed 's/[│├└─*]//g; s/^ *//; s/\[vol:.*//' | head -6)"
+    if [ -n "$sinks" ]; then ok "Audio outputs found"; while IFS= read -r s; do info "$s"; done <<< "$sinks"; else warn "No audio output found"; fi
+  fi
+
+  head1 "Network"
+  if have nmcli; then
+    while IFS=: read -r dev type state; do
+      case "$type" in ethernet|wifi) ;; *) continue ;; esac
+      drv="$(basename "$(readlink -f "/sys/class/net/$dev/device/driver" 2> /dev/null)" 2> /dev/null)"
+      if [ "$state" = "connected" ]; then ok "$type $dev connected (driver: ${drv:-?})"; else info "$type $dev: $state (driver: ${drv:-?})"; fi
+    done < <(nmcli -t -f DEVICE,TYPE,STATE device 2> /dev/null)
+  fi
+  if have rfkill && rfkill list 2> /dev/null | grep -q 'Soft blocked: yes'; then
+    warn "Wi-Fi or Bluetooth is switched off (rfkill)"
+  fi
+
+  head1 "Bluetooth"
+  if [ -d /sys/class/bluetooth ] && ls /sys/class/bluetooth/hci* > /dev/null 2>&1; then
+    if systemctl is-active --quiet bluetooth; then ok "Bluetooth adapter found and service running"; else warn "Bluetooth adapter found but the service is not running"; fi
+  else
+    info "No Bluetooth adapter"
+  fi
+
+  head1 "Controllers and input"
+  pads="$(ls /dev/input/by-id/ 2> /dev/null | grep -i joystick | sed 's/-event-joystick//; s/-joystick//' | sort -u)"
+  if [ -n "$pads" ]; then ok "Game controllers connected:"; while IFS= read -r p; do info "$p"; done <<< "$pads"; else info "No game controller connected right now (Xbox, PlayStation, Switch and Steam controllers are supported)"; fi
+  if lsusb 2> /dev/null | grep -qi ' 1532:'; then info "Razer device found: run 'ujust install-openrazer' for lighting and DPI control"; fi
+
+  head1 "Storage"
+  lsblk -d -n -o NAME,SIZE,TRAN,MODEL 2> /dev/null | grep -v '^zram\|^loop' | while IFS= read -r d; do info "$d"; done
+  other="$(lsblk -n -o NAME,FSTYPE,MOUNTPOINT 2> /dev/null | awk '$2 ~ /ntfs|ext4|btrfs|xfs/ && $3 == "" {print $1}' | head -5 | paste -sd ' ')"
+  [ -n "$other" ] && info "Unmounted partitions (other drives or Windows): $other"
+  if lsblk -n -o FSTYPE 2> /dev/null | grep -qx ntfs; then
+    info "Windows (NTFS) drives found: install Linux games on a Linux drive; NTFS game libraries often break Proton"
+  fi
+
+  head1 "Drivers and firmware"
+  nodrv="$(lspci -k 2> /dev/null | awk '/^[0-9a-f]/{if(dev!="" && !drv) print dev; dev=$0; drv=0} /Kernel driver in use/{drv=1} END{if(dev!="" && !drv) print dev}' | grep -Eiv 'host bridge|pci bridge|isa bridge|smbus|signal processing|non-essential|system peripheral|dummy|RAM memory|encryption|IOMMU' )"
+  if [ -n "$nodrv" ]; then warn "Devices without a driver:"; while IFS= read -r d; do info "${d#* }"; done <<< "$nodrv"; else ok "Every important PCI device has a driver"; fi
+  fw="$(journalctl -k -b --no-pager 2> /dev/null | grep -Ei 'firmware.*(failed|not found|missing)|Direct firmware load.*failed' | sed 's/^.*kernel: //' | sort -u | head -5)"
+  if [ -n "$fw" ]; then warn "Missing firmware reported by the kernel:"; while IFS= read -r f; do info "$f"; done <<< "$fw"; else ok "No missing firmware reported"; fi
+
+  head1 "Summary"
+  if [ "${#WARNINGS[@]}" -eq 0 ]; then echo "  Everything looks good."; else echo "  ${#WARNINGS[@]} item(s) to look at (WARN above)."; fi
+}
+
+# ---------------------------------------------------------------- fixes
+fix_things() {
+  head1 "Fixes"
+  if have rfkill && rfkill list 2> /dev/null | grep -q 'Soft blocked: yes'; then
+    if ask "Wi-Fi or Bluetooth is switched off. Switch it on?"; then pkexec rfkill unblock all && ok "Wireless switched on"; fi
+  fi
+  if ls /sys/class/bluetooth/hci* > /dev/null 2>&1 && ! systemctl is-active --quiet bluetooth; then
+    if ask "Start Bluetooth (needed for wireless controllers and headsets)?"; then pkexec systemctl enable --now bluetooth && ok "Bluetooth started"; fi
+  fi
+  if have fwupdmgr; then
+    pkexec fwupdmgr refresh --force > /dev/null 2>&1
+    if fwupdmgr get-updates --no-unreported-check > /dev/null 2>&1; then
+      if ask "Firmware updates are available for your hardware (motherboard, SSD, mouse, etc.). Install them now? Some need a restart."; then
+        pkexec fwupdmgr update -y --no-reboot-check && ok "Firmware updated (restart when convenient)"
+      fi
+    else
+      ok "Firmware is up to date (or the hardware doesn't publish updates)"
+    fi
+  fi
+  if lsblk -n -o FSTYPE 2> /dev/null | grep -qE '^(ext4|btrfs|xfs)$' && [ "$(lsblk -d -n | grep -vc '^zram\|^loop')" -gt 1 ]; then
+    if ask "Mount your other drives automatically at startup (so Steam can keep game libraries on them)?"; then
+      ujust enable-automount-all && ok "Other drives mount automatically"
+    fi
+  fi
+  if efibootmgr 2> /dev/null | grep -qi 'windows boot manager'; then
+    if ask "Windows is installed too. Add a 'Boot Windows' tile to Steam so you can switch from Gaming Mode?"; then
+      ujust setup-boot-windows-steam && ok "Boot Windows tile added to Steam"
+    fi
+  fi
+}
+
+# ---------------------------------------------------------------- integrations
+flatpak_has() { flatpak info "$1" > /dev/null 2>&1; }
+
+integrations() {
+  head1 "Integrations"
+  local items=(
+    "decky|Decky Loader|Plugins in Gaming Mode (performance overlay tweaks, themes, game info)"
+    "com.vysp3r.ProtonPlus|ProtonPlus|Extra Proton versions such as Proton-GE for games that need them"
+    "com.heroicgameslauncher.hgl|Heroic Games Launcher|Epic Games, GOG and Amazon games"
+    "com.discordapp.Discord|Discord|Voice and text chat"
+    "net.lutris.Lutris|Lutris|Battle.net, EA app, Ubisoft Connect and other launchers"
+    "com.obsproject.Studio|OBS Studio|Record and stream gameplay"
+    "coolercontrol|CoolerControl|Fan curves and AIO pump control"
+  )
+  local choices=()
+  if [ "$GUI" -eq 1 ]; then
+    local list=()
+    for it in "${items[@]}"; do IFS='|' read -r id name desc <<< "$it"; list+=(FALSE "$id" "$name" "$desc"); done
+    choices=($(zenity --list --checklist --title="Gaming PC Setup" --width=720 --height=420 \
+      --text="Choose what to add (already installed items are kept as they are):" \
+      --column="Add" --column="id" --column="App" --column="What it does" --hide-column=2 --print-column=2 \
+      --separator=' ' "${list[@]}" 2> /dev/null))
+  else
+    for it in "${items[@]}"; do
+      IFS='|' read -r id name desc <<< "$it"
+      ask "Add $name ($desc)?" && choices+=("$id")
+    done
+  fi
+  [ "${#choices[@]}" -gt 0 ] && have notify-send && notify-send "Gaming PC Setup" "Installing ${#choices[@]} item(s). This can take a few minutes."
+  for id in "${choices[@]}"; do
+    case "$id" in
+      decky) ujust setup-decky install && ok "Decky Loader installed" || warn "Decky Loader install failed" ;;
+      coolercontrol) ujust install-coolercontrol && ok "CoolerControl set up" || warn "CoolerControl setup failed" ;;
+      *)
+        if flatpak_has "$id"; then ok "$id already installed"
+        elif flatpak install -y --noninteractive flathub "$id"; then ok "$id installed"
+        else warn "$id install failed"; fi ;;
+    esac
+  done
+}
+
+# ---------------------------------------------------------------- main
+run_all() {
+  hardware_report
+  [ "$MODE" = "report" ] && return
+  fix_things
+  integrations
+  mkdir -p "$STATE_DIR" && touch "$STATE_DIR/done"
+  head1 "Done"
+  echo "  Run 'Gaming PC Setup' again any time from the app menu, or 'ujust gaming-setup' in Konsole."
+}
+
+if [ "$GUI" -eq 1 ]; then
+  if [ "$MODE" = "first-run" ] && ! ask "Welcome! Check your hardware and set up gaming extras now?\n\nYou can run this later from the app menu: Gaming PC Setup."; then
+    mkdir -p "$STATE_DIR" && touch "$STATE_DIR/done"; exit 0
+  fi
+  hardware_report > "$REPORT" 2>&1
+  zenity --text-info --title="Hardware check" --filename="$REPORT" --width=760 --height=600 --font="monospace 10" 2> /dev/null
+  if [ "$MODE" != "report" ]; then
+    { fix_things; integrations; } >> "$REPORT" 2>&1
+    mkdir -p "$STATE_DIR" && touch "$STATE_DIR/done"
+    zenity --info --title="Gaming PC Setup" --width=420 --text="Setup finished. The full report is saved as Gaming-Setup-Report.txt in your home folder.\n\nRun Gaming PC Setup again any time from the app menu." 2> /dev/null
+  fi
+else
+  run_all 2>&1 | tee "$REPORT"
+fi

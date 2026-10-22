@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Gaming PC Setup
+Comment=Check all hardware and drivers, fix common problems, add gaming apps
+Exec=gaming-setup
+Icon=preferences-system
+Terminal=false
+Categories=System;Settings;Game;
+Keywords=drivers;hardware;controller;bluetooth;firmware;decky;proton;

@@ -50,4 +50,12 @@ for pkg in "${REMOVE[@]}"; do
   rpm -q --quiet "$pkg" && echo "  kept: $pkg" || true
 done
 
+# Hardware tools used by gaming-setup and handy for troubleshooting
+dnf5 install -y --skip-unavailable inxi radeontop nvtop pciutils usbutils efibootmgr zenity
+
+# Register the gaming-setup commands with ujust
+grep -q '99-gaming-os.just' /usr/share/ublue-os/justfile || \
+  echo 'import "/usr/share/ublue-os/just/99-gaming-os.just"' >> /usr/share/ublue-os/justfile
+chmod 0755 /usr/bin/gaming-setup
+
 dnf5 clean all

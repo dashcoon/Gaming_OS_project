@@ -48,6 +48,18 @@ sudo bootc switch ghcr.io/dashcoon/gaming-os:latest
 
 Then restart.
 
+## First start: Gaming PC Setup
+
+Switch to Desktop once (Steam → power menu → **Switch to Desktop**). **Gaming PC Setup** opens by itself the first time and:
+
+1. **Checks every piece of hardware** and the driver it uses: CPU power management (AMD P-State), graphics card and Vulkan, displays, audio, network and Wi-Fi, Bluetooth, controllers, drives, devices without a driver, and firmware the kernel couldn't load. The report is saved as `Gaming-Setup-Report.txt` in your home folder.
+2. **Fixes common problems** after asking: switches Wi-Fi/Bluetooth on, starts Bluetooth for wireless controllers and headsets, installs firmware updates for the motherboard, SSD and peripherals, mounts your other drives at startup for extra Steam libraries, and adds a **Boot Windows** tile to Steam if Windows is also installed.
+3. **Adds the integrations you tick:** Decky Loader (Gaming Mode plugins), ProtonPlus (Proton-GE and other Proton versions), Heroic (Epic, GOG, Amazon), Lutris (Battle.net, EA app, Ubisoft Connect), Discord, OBS Studio, CoolerControl (fan curves and AIO pumps).
+
+Run it again any time: **Gaming PC Setup** in the app menu, or `ujust gaming-setup` in Konsole. **Hardware Report** (or `ujust hardware-report`) shows the check only.
+
+Drivers come with the image: AMD graphics (Mesa, Vulkan), Xbox, PlayStation, Switch and Steam controllers, Wi-Fi and Bluetooth firmware, and Bazzite's gaming kernel. Razer devices: `ujust install-openrazer`. 4K 120 Hz over HDMI on AMD: `ujust configure-amd-hdmi21`.
+
 ## Play
 
 1. Sign in to Steam in Gaming Mode.

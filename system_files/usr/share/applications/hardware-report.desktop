@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Hardware Report
+Comment=Show every device, the driver it uses and anything missing
+Exec=gaming-setup --report
+Icon=computer
+Terminal=false
+Categories=System;

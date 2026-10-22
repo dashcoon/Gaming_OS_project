@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Gaming PC Setup (first run)
+Exec=gaming-setup --first-run
+NoDisplay=true
+X-KDE-autostart-after=panel
