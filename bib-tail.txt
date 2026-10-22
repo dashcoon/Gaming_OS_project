@@ -1,0 +1,400 @@
+remove '/run/osbuild/tree/usr/lib/.build-id/6a/ecf682b3c101bb71843af9dd58964b4426067d'
+remove '/run/osbuild/tree/usr/lib64/libcdda_paranoia.so.0.10.2'
+remove '/run/osbuild/tree/usr/lib64/libcdda_interface.so.0.10.2'
+remove '/run/osbuild/tree/usr/lib64/libcdda_paranoia.so.0'
+remove '/run/osbuild/tree/usr/share/locale/de/LC_MESSAGES/libvisual-0.4.mo'
+remove '/run/osbuild/tree/usr/share/licenses/libvisual/COPYING'
+remove '/run/osbuild/tree/usr/lib64/libvisual-0.4.so.0'
+remove '/run/osbuild/tree/usr/share/locale/es_ES/LC_MESSAGES/libvisual-0.4.mo'
+remove '/run/osbuild/tree/usr/lib64/libvisual-0.4.so.0.0.0'
+remove '/run/osbuild/tree/usr/share/locale/es_AR/LC_MESSAGES/libvisual-0.4.mo'
+remove '/run/osbuild/tree/usr/lib/.build-id/c2/14e16672732b69d6d5436168a32b1d7d959a92'
+remove '/run/osbuild/tree/usr/lib64/libavahi-glib.so.1'
+remove '/run/osbuild/tree/usr/lib64/libavahi-glib.so.1.0.2'
+remove '/run/osbuild/tree/usr/lib/.build-id/8f/744dcf160187fcfa0ef91ffe68ed7b6ef3f0e9'
+remove '/run/osbuild/tree/usr/share/licenses/ModemManager-glib/COPYING'
+remove '/run/osbuild/tree/usr/lib64/libmm-glib.so.0'
+remove '/run/osbuild/tree/usr/lib/.build-id/44/411c406e22b6510c46515c116bedad54c2efb1'
+remove '/run/osbuild/tree/usr/lib64/libmm-glib.so.0.11.0'
+remove '/run/osbuild/tree/usr/lib64/girepository-1.0/ModemManager-1.0.typelib'
+remove '/run/osbuild/tree/usr/lib/.build-id'
+remove '/run/osbuild/tree/etc/machine-id'
+append '/run/osbuild/tree/etc/machine-id' ''
+remove '/run/osbuild/tree/var/lib/systemd/catalog/database'
+remove '/run/osbuild/tree/var/cache/ldconfig/aux-cache'
+remove '/run/osbuild/tree/etc/pki/ca-trust/extracted/java/cacerts'
+remove: Skipping RPM database path /usr/lib/sysimage/rpm/*
+remove: Skipping RPM database path /var/lib/rpm/*
+remove: Skipping RPM database path /var/lib/yum
+remove: Skipping RPM database path /var/lib/dnf
+run  chroot /run/osbuild/tree /bin/sh -c LC_ALL=C sort /etc/group > /etc/group- && mv /etc/group- /etc/group
+run  chroot /run/osbuild/tree /bin/sh -c LC_ALL=C sort /etc/gshadow > /etc/gshadow- && mv /etc/gshadow- /etc/gshadow
+
+⏱  Duration: 5.60s
+org.osbuild.selinux.config: 53b2f1288a3adf9655b09e0a061c3698048a2a6e18091ae5a82aa1254ac0d1d1 {
+  "state": "permissive"
+}
+
+⏱  Duration: 0.22s
+Pipeline bootiso-tree: b33303ba7f10d247df65cfe09fdd5c336a02668bbe5f27bf12b045dd0e0bc5a5
+Build
+  root: bb178f5d5a610a61eee91c7503ab7270c8b2945e58b0f4301a990936a6669e15
+  runner: org.osbuild.linux (org.osbuild.linux)
+org.osbuild.mkdir: 618080710f161b346a9822a1c16d36f113421327aa9f17643d181a20f7fafbe1 {
+  "paths": [
+    {
+      "path": "/images"
+    },
+    {
+      "path": "/images/pxeboot"
+    }
+  ]
+}
+
+⏱  Duration: 0.22s
+org.osbuild.copy: dd923f627960d3755061890244e2a9dc50a841406f0e413a38ef06531dc19dd4 {
+  "paths": [
+    {
+      "from": "input://tree/boot/vmlinuz-7.2.11-200.fc44.x86_64",
+      "to": "tree:///images/pxeboot/vmlinuz"
+    },
+    {
+      "from": "input://tree/boot/initramfs-7.2.11-200.fc44.x86_64.img",
+      "to": "tree:///images/pxeboot/initrd.img"
+    }
+  ]
+}
+copying '/run/osbuild/inputs/tree/boot/vmlinuz-7.2.11-200.fc44.x86_64' -> '/run/osbuild/tree/images/pxeboot/vmlinuz'
+copying '/run/osbuild/inputs/tree/boot/initramfs-7.2.11-200.fc44.x86_64.img' -> '/run/osbuild/tree/images/pxeboot/initrd.img'
+
+⏱  Duration: 1.11s
+org.osbuild.squashfs: ad35db6c73080f6561896af7b8efa5f782867fe0121c09524e25d24e8e685231 {
+  "filename": "images/install.img",
+  "compression": {
+    "method": "zstd"
+  }
+}
+Parallel mksquashfs: Using 4 processors
+Creating 4.0 filesystem on /run/osbuild/tree/images/install.img, block size 131072.
+[===============|                                            ] 10800/39903  27%[============================/                               ] 19300/39903  48%[===========================================================|] 39903/39903 100%
+
+Exportable Squashfs 4.0 filesystem, zstd compressed, data block size 131072
+	compressed data, compressed metadata, compressed fragments,
+	compressed xattrs, compressed ids
+	duplicates are removed
+Filesystem size 928947.99 Kbytes (907.18 Mbytes)
+	44.92% of uncompressed filesystem size (2067841.60 Kbytes)
+Inode table size 346947 bytes (338.82 Kbytes)
+	24.52% of uncompressed inode table size (1415085 bytes)
+Directory table size 353066 bytes (344.79 Kbytes)
+	38.12% of uncompressed directory table size (926262 bytes)
+Xattr table size 124 bytes (0.12 Kbytes)
+	43.21% of uncompressed xattr table size (287 bytes)
+Number of duplicate files found 1085
+Number of inodes 38069
+Number of files 26954
+Number of fragments 2749
+Number of symbolic links 4019
+Number of device nodes 0
+Number of fifo nodes 0
+Number of socket nodes 0
+Number of directories 7096
+Number of hard-links 1551
+Number of ids (unique uids + gids) 13
+Number of uids 7
+	root (0)
+	unknown (986)
+	unknown (985)
+	unknown (32)
+	unknown (993)
+	unknown (992)
+	unknown (29)
+Number of gids 13
+	unknown (0)
+	unknown (995)
+	unknown (7)
+	unknown (114)
+	unknown (986)
+	unknown (985)
+	unknown (32)
+	unknown (81)
+	unknown (22)
+	unknown (35)
+	unknown (993)
+	unknown (992)
+	unknown (29)
+
+⏱  Duration: 62.12s
+org.osbuild.grub2.iso.legacy: 4856d484da661c94b37892d160bb2350bed8a694073e5977213aa7750f02ddb9 {
+  "product": {
+    "name": "Bazzite",
+    "version": "44"
+  },
+  "kernel": {
+    "dir": "/images/pxeboot",
+    "opts": [
+      "inst.stage2=hd:LABEL=Container-Installer-x86_64",
+      "inst.ks=hd:LABEL=Container-Installer-x86_64:/osbuild.ks"
+    ]
+  },
+  "isolabel": "Container-Installer-x86_64",
+  "troubleshooting": true,
+  "test": true,
+  "install": true
+}
+kernel dir at /images/pxeboot
+
+⏱  Duration: 0.31s
+org.osbuild.grub2.inst: d7d7a2aa7cd7b0adbbfcbb05ec2f4e0874273109024fcffd85c5ad51c29a206d {
+  "filename": "images/eltorito.img",
+  "platform": "i386-pc",
+  "core": {
+    "type": "mkimage",
+    "partlabel": "gpt",
+    "filesystem": "iso9660"
+  },
+  "prefix": {
+    "path": "/boot/grub2"
+  }
+}
+prefix: /boot/grub2
+grub2-mkimage: info: the total module size is 0x6ab8.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/kernel.img.
+grub2-mkimage: info: locating the section .text at 0x0.
+grub2-mkimage: info: locating the section .rodata at 0xc300.
+grub2-mkimage: info: locating the section .module_license at 0xe5a4.
+grub2-mkimage: info: locating the section .data at 0xe5e0.
+grub2-mkimage: info: locating the section .bss at 0xef60.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/biosdisk.mod.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/part_gpt.mod.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/fshelp.mod.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/iso9660.mod.
+grub2-mkimage: info: kernel_img=0x55bd1d0be210, kernel_size=0xef58.
+grub2-mkimage: info: the core size is 0x8278.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/lzma_decompress.img.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/cdboot.img.
+grub2-mkimage: info: writing 0x800 bytes.
+grub2-mkimage: info: reading /usr/lib/grub/i386-pc/diskboot.img.
+grub2-mkimage: info: writing 0x200 bytes.
+grub2-mkimage: info: writing 0x8d98 bytes.
+
+⏱  Duration: 0.25s
+org.osbuild.truncate: 63f4e6404e016ef2cf5b22d533cf9420ca125fe3e617cb6e1da5eb8540d7c5fa {
+  "filename": "images/efiboot.img",
+  "size": "20971520"
+}
+
+⏱  Duration: 0.22s
+org.osbuild.mkfs.fat: bc4cd8f5e4c456cd6a3e6237b0ed9d857c63776fa6a2ed0b152f447bd66d5367 {
+  "volid": "5000080C"
+}
+device/device (org.osbuild.loopback): loop0 acquired (locked: True)
+mkfs.fat 4.2 (2021-01-31)
+
+⏱  Duration: 0.30s
+org.osbuild.copy: 19cbddfb7c8123db8770fb43a5f092d7da414786d872b89740d0bc5b335e963b {
+  "paths": [
+    {
+      "from": "input://root-tree/",
+      "to": "mount://-/"
+    }
+  ]
+}
+device/- (org.osbuild.loopback): loop0 acquired (locked: False)
+mount/- (org.osbuild.fat): mounting /dev/loop0 -> /store/tmp/buildroot-tmp-p5skmsqw/mounts/
+copying '/run/osbuild/inputs/root-tree/.' -> '/run/osbuild/mounts/.'
+mount/- (org.osbuild.fat): umount: /store/tmp/buildroot-tmp-p5skmsqw/mounts/ unmounted
+
+⏱  Duration: 0.53s
+org.osbuild.copy: fbaa9622fb582188519f9e11e0424faed7b7790a964f1310bbe48cb74959b219 {
+  "paths": [
+    {
+      "from": "input://root-tree/EFI",
+      "to": "tree:///"
+    }
+  ]
+}
+copying '/run/osbuild/inputs/root-tree/EFI' -> '/run/osbuild/tree/.'
+
+⏱  Duration: 0.34s
+org.osbuild.mkdir: 5d0fd77ad1b50b5089f91ee7ef14dfc9d50f399238b2e12bf66bcca88abcfb3e {
+  "paths": [
+    {
+      "path": "/container"
+    }
+  ]
+}
+
+⏱  Duration: 0.23s
+org.osbuild.skopeo: c7f16bb516e159c62329531355eb4a7322d3e5c4f9869c2f483fc2a82997226c {
+  "destination": {
+    "type": "oci",
+    "path": "/container"
+  },
+  "remove-signatures": true
+}
+time="2026-10-22T16:13:19Z" level=info msg="Not using native diff for overlay, this may cause degraded performance for building images: kernel has CONFIG_OVERLAY_FS_REDIRECT_DIR enabled"
+Copying config sha256:3f208c8c8b9f9e831744afb5a8a863a4fc5763b1a541d29b10cbcbd91db9fd31
+Writing manifest to image destination
+
+⏱  Duration: 95.34s
+org.osbuild.kickstart: 776012f3b56772a717af520e5e1dfc80f4db43bdaa925a6501c9bdc5f071dbcc {
+  "path": "/osbuild-base.ks",
+  "ostreecontainer": {
+    "stateroot": "",
+    "url": "/run/install/repo/container",
+    "transport": "oci",
+    "remote": "",
+    "signatureverification": false
+  },
+  "%post": [
+    {
+      "erroronfail": true,
+      "commands": [
+        "set -e",
+        "bootc switch --mutate-in-place --transport registry ghcr.io/dashcoon/gaming-os:latest",
+        "# used during automatic image testing as finished marker",
+        "if [ -c /dev/ttyS0 ]; then",
+        "  # continue on errors here, because we used to omit --erroronfail",
+        "  echo \"Install finished\" > /dev/ttyS0 || true",
+        "fi"
+      ]
+    }
+  ]
+}
+created kickstarted at: osbuild-base.ks
+
+ostreecontainer --url=/run/install/repo/container --transport=oci
+%post --erroronfail
+set -e
+bootc switch --mutate-in-place --transport registry ghcr.io/dashcoon/gaming-os:latest
+# used during automatic image testing as finished marker
+if [ -c /dev/ttyS0 ]; then
+  # continue on errors here, because we used to omit --erroronfail
+  echo "Install finished" > /dev/ttyS0 || true
+fi
+%end
+
+
+⏱  Duration: 0.23s
+org.osbuild.copy: a053ecfd9e3c271f52d4e39481cb16e57e285d4806e4801a151c722bda1414a0 {
+  "paths": [
+    {
+      "from": "input://file-793eda3beab6ce6732cc7e71459e73fe7fe7500af0f49d9eb27b40ff61cd7e76/sha256:793eda3beab6ce6732cc7e71459e73fe7fe7500af0f49d9eb27b40ff61cd7e76",
+      "to": "tree:///osbuild.ks",
+      "remove_destination": true
+    }
+  ]
+}
+copying '/run/osbuild/inputs/file-793eda3beab6ce6732cc7e71459e73fe7fe7500af0f49d9eb27b40ff61cd7e76/sha256:793eda3beab6ce6732cc7e71459e73fe7fe7500af0f49d9eb27b40ff61cd7e76' -> '/run/osbuild/tree/osbuild.ks'
+
+⏱  Duration: 0.30s
+org.osbuild.discinfo: b33303ba7f10d247df65cfe09fdd5c336a02668bbe5f27bf12b045dd0e0bc5a5 {
+  "basearch": "x86_64",
+  "release": ""
+}
+
+⏱  Duration: 0.22s
+Pipeline bootiso: aee76e11d0310df12831bfb0e63255b187907bcb40ad31da7d83ed6309ac3baf
+Build
+  root: bb178f5d5a610a61eee91c7503ab7270c8b2945e58b0f4301a990936a6669e15
+  runner: org.osbuild.linux (org.osbuild.linux)
+org.osbuild.xorrisofs: f5aa24f29fe6d664ad9c25dce955b3dcf9b23747dad24300693202fce21a96c3 {
+  "filename": "install.iso",
+  "volid": "Container-Installer-x86_64",
+  "sysid": "LINUX",
+  "boot": {
+    "image": "images/eltorito.img",
+    "catalog": "boot.cat"
+  },
+  "efi": "images/efiboot.img",
+  "isolevel": 3,
+  "grub2mbr": "/usr/lib/grub/i386-pc/boot_hybrid.img"
+}
+['/usr/bin/xorrisofs', '-verbose', '-rock', '-joliet', '-iso-level', '3', '-V', 'Container-Installer-x86_64', '-sysid', 'LINUX', '--grub2-mbr', '/usr/lib/grub/i386-pc/boot_hybrid.img', '-partition_offset', '16', '-appended_part_as_gpt', '-append_partition', '2', 'C12A7328-F81F-11D2-BA4B-00A0C93EC93B', '/run/osbuild/inputs/tree/images/efiboot.img', '-iso_mbr_part_type', 'EBD0A0A2-B9E5-4433-87C0-68B6B72699C7', '-b', 'images/eltorito.img', '-c', 'boot.cat', '--boot-catalog-hide', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table', '--grub2-boot-info', '-eltorito-alt-boot', '-e', '--interval:appended_partition_2:all::', '-no-emul-boot', '-o', '/run/osbuild/tree/install.iso', '/run/osbuild/inputs/tree']
+xorriso 1.5.8.pl02 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/run/osbuild/tree/install.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 92.6g free
+xorriso : WARNING : -volid text is too long for Joliet (26 > 16)
+xorriso : WARNING : -volid text does not comply to ISO 9660 / ECMA 119 rules
+Added to ISO image: directory '/'='/run/osbuild/inputs/tree'
+xorriso : UPDATE :     461 files added in 1 seconds
+xorriso : UPDATE :     461 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+xorriso : UPDATE :  0.32% done
+xorriso : UPDATE :  6.98% done
+xorriso : UPDATE :  17.69% done
+xorriso : UPDATE :  20.40% done, estimate finish Thu Oct 22 16:15:09 2026
+xorriso : UPDATE :  22.35% done, estimate finish Thu Oct 22 16:15:13 2026
+xorriso : UPDATE :  24.01% done, estimate finish Thu Oct 22 16:15:16 2026
+xorriso : UPDATE :  25.95% done, estimate finish Thu Oct 22 16:15:18 2026
+xorriso : UPDATE :  27.99% done, estimate finish Thu Oct 22 16:15:20 2026
+xorriso : UPDATE :  30.03% done, estimate finish Thu Oct 22 16:15:22 2026
+xorriso : UPDATE :  32.06% done, estimate finish Thu Oct 22 16:15:23 2026
+xorriso : UPDATE :  34.09% done, estimate finish Thu Oct 22 16:15:24 2026
+xorriso : UPDATE :  36.08% done, estimate finish Thu Oct 22 16:15:26 2026
+xorriso : UPDATE :  38.15% done, estimate finish Thu Oct 22 16:15:27 2026
+xorriso : UPDATE :  40.19% done, estimate finish Thu Oct 22 16:15:39 2026
+xorriso : UPDATE :  42.21% done, estimate finish Thu Oct 22 16:15:38 2026
+xorriso : UPDATE :  44.22% done, estimate finish Thu Oct 22 16:15:38 2026
+xorriso : UPDATE :  49.43% done, estimate finish Thu Oct 22 16:15:33 2026
+xorriso : UPDATE :  50.36% done, estimate finish Thu Oct 22 16:15:35 2026
+xorriso : UPDATE :  52.31% done, estimate finish Thu Oct 22 16:15:35 2026
+xorriso : UPDATE :  53.77% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  55.79% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  57.99% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  60.16% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  61.65% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  63.66% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  65.88% done, estimate finish Thu Oct 22 16:15:35 2026
+xorriso : UPDATE :  68.01% done, estimate finish Thu Oct 22 16:15:35 2026
+xorriso : UPDATE :  69.70% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  71.43% done, estimate finish Thu Oct 22 16:15:37 2026
+xorriso : UPDATE :  73.52% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  75.61% done, estimate finish Thu Oct 22 16:15:36 2026
+xorriso : UPDATE :  76.90% done, estimate finish Thu Oct 22 16:15:37 2026
+xorriso : UPDATE :  77.33% done, estimate finish Thu Oct 22 16:15:38 2026
+xorriso : UPDATE :  77.79% done, estimate finish Thu Oct 22 16:15:41 2026
+xorriso : UPDATE :  78.27% done, estimate finish Thu Oct 22 16:15:43 2026
+xorriso : UPDATE :  78.73% done, estimate finish Thu Oct 22 16:15:44 2026
+xorriso : UPDATE :  79.33% done, estimate finish Thu Oct 22 16:15:46 2026
+xorriso : UPDATE :  80.03% done, estimate finish Thu Oct 22 16:15:47 2026
+xorriso : UPDATE :  80.56% done, estimate finish Thu Oct 22 16:15:48 2026
+xorriso : UPDATE :  81.10% done, estimate finish Thu Oct 22 16:15:49 2026
+xorriso : UPDATE :  83.70% done, estimate finish Thu Oct 22 16:15:47 2026
+xorriso : UPDATE :  90.00% done, estimate finish Thu Oct 22 16:15:42 2026
+xorriso : UPDATE :  95.32% done, estimate finish Thu Oct 22 16:15:39 2026
+ISO image produced: 3807006 sectors
+Written to medium : 3807006 sectors at LBA 0
+Writing to 'stdio:/run/osbuild/tree/install.iso' completed successfully.
+
+
+⏱  Duration: 50.00s
+org.osbuild.implantisomd5: aee76e11d0310df12831bfb0e63255b187907bcb40ad31da7d83ed6309ac3baf {
+  "filename": "install.iso"
+}
+['implantisomd5', '/run/osbuild/tree/install.iso']
+Inserting md5sum into iso image...
+md5 = 2bf6207a990a54acc080cdc16dfe998e
+Inserting fragment md5sums into iso image...
+fragmd5 = d3ad45c88799569447274192a565c52e92144d87288ffd2c7d35ecc86c5a
+frags = 20
+Setting supported flag to 0
+
+⏱  Duration: 18.67s
+manifest - finished successfully
+
+Pipelines
+  build:    	bb178f5d5a610a61eee91c7503ab7270c8b2945e58b0f4301a990936a6669e15
+  anaconda-tree:	53b2f1288a3adf9655b09e0a061c3698048a2a6e18091ae5a82aa1254ac0d1d1
+  efiboot-tree:	82fb74753eb145963d07ae11919c4617b2c73bd1a8e6f4d7fb6dc5580f666998
+  bootiso-tree:	b33303ba7f10d247df65cfe09fdd5c336a02668bbe5f27bf12b045dd0e0bc5a5
+  bootiso:  	aee76e11d0310df12831bfb0e63255b187907bcb40ad31da7d83ed6309ac3baf
+
+Checkpoints
+Build complete!
+Results saved in .
+exit: 0

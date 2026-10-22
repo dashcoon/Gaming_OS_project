@@ -1,0 +1,12 @@
+output:
+total 548
+drwxr-xr-x 3 runner runner   4096 Oct 22 16:16 .
+drwxr-xr-x 9 runner runner   4096 Oct 22 16:04 ..
+drwxr-xr-x 2 root   root     4096 Oct 22 16:14 bootiso
+-rw-r--r-- 1 root   root   548027 Oct 22 16:07 manifest-anaconda-iso.json
+
+output/bootiso:
+total 7614024
+drwxr-xr-x 2 root   root         4096 Oct 22 16:14 .
+drwxr-xr-x 3 runner runner       4096 Oct 22 16:16 ..
+-rw-r--r-- 1 root   root   7796748288 Oct 22 16:16 install.iso
