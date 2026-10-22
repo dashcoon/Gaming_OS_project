@@ -4,14 +4,14 @@ A lean Linux gaming image for desktop PCs, built on [Bazzite](https://bazzite.gg
 
 | Version | For | Image |
 | --- | --- | --- |
-| **gaming-os** | AMD Radeon or Intel Arc graphics | `ghcr.io/dashcoon/gaming-os:latest` |
+| **gaming-os** | AMD Radeon, Intel Arc or Intel integrated graphics | `ghcr.io/dashcoon/gaming-os:latest` |
 | **gaming-os-nvidia** | NVIDIA GeForce GTX 16-series, RTX 20-series and newer | `ghcr.io/dashcoon/gaming-os-nvidia:latest` |
 
-Both work with AMD and Intel CPUs. Picked the wrong one? Gaming PC Setup notices and offers to switch.
+Both work with AMD and Intel CPUs, desktops and laptops. Picked the wrong one? Gaming PC Setup notices and offers to switch.
 
 - **Boots into Steam Big Picture** like a Steam Deck. **Switch to Desktop** in the power menu opens a full KDE desktop.
 - **Uses the PC's own hardware:** AMD graphics through the Mesa drivers built into Linux, Bazzite's gaming kernel, Gamescope, GameMode and the sched-ext CPU schedulers. Windows games run through **Proton** in Steam.
-- **No bloat:** `build_files/build.sh` removes extras a desktop gaming PC doesn't need (Android container, VPN, web admin console, disc ripper, laptop and Steam Deck hardware tools, CJK input methods, TV remote support). It only removes a package when nothing else depends on it, so the gaming stack stays intact.
+- **No bloat, full hardware support:** `build_files/build.sh` removes extras a gaming PC doesn't need (Android container, VPN, web admin console, disc ripper, CJK input methods, Steam Deck-only parts) and adds drivers for a wide range of hardware (see [Drivers](#drivers)). A package is only removed when nothing else depends on it, so the gaming stack stays intact.
 - **Safe updates:** the system is image-based. GitHub rebuilds the image every day from the latest Bazzite, the PC updates in the background, and the previous version stays in the boot menu if an update misbehaves.
 
 ## Install
@@ -72,17 +72,26 @@ Everything is in the image, so the PC works offline from the first boot. On Linu
 
 | Hardware | Driver | Notes |
 | --- | --- | --- |
-| AMD or Intel CPU | `amd-pstate` / `intel_pstate` power management, CPU microcode | AMD: enable *CPPC* in the BIOS for amd-pstate |
-| AMD Radeon GPU and displays | `amdgpu` kernel driver + Mesa (Vulkan RADV, OpenGL), FreeSync | 4K 120 Hz over HDMI: `ujust configure-amd-hdmi21` |
-| NVIDIA GeForce GPU | NVIDIA driver (open kernel modules) with Vulkan, DLSS, Reflex and G-Sync, in **gaming-os-nvidia** | GTX 16-series, RTX 20-series and newer. Older cards (GTX 10-series and earlier) are not supported for gaming |
-| Intel Arc / integrated GPU | `i915`/`xe` + Mesa, in **gaming-os** | |
+| AMD CPU | `amd-pstate` power management, AMD microcode | Enable *CPPC* in the BIOS for amd-pstate |
+| Intel CPU | `intel_pstate`, Intel microcode, `thermald` thermal management | |
+| AMD Radeon GPU and displays | `amdgpu` + Mesa (Vulkan RADV, OpenGL), FreeSync, VA-API video | 4K 120 Hz over HDMI: `ujust configure-amd-hdmi21` |
+| Intel Arc / integrated GPU | `i915`/`xe` + Mesa (Vulkan ANV), Intel media driver and oneVPL for video, `intel-gpu-tools` | **gaming-os** |
+| NVIDIA GeForce GPU | NVIDIA driver (open kernel modules), Vulkan, DLSS, Reflex, G-Sync, NVENC | **gaming-os-nvidia**; GTX 16-series, RTX 20-series and newer. GTX 10-series and earlier are not supported for gaming |
+| Laptops | Hybrid graphics switching (`supergfxctl`), TDP control, screen rotation, Framework laptop tools | |
 | Ethernet (LAN) | Realtek `r8169`, Intel `igc`/`e1000e`, and others in the kernel | |
-| Wi-Fi and Bluetooth | Intel `iwlwifi`, MediaTek `mt7921`/`mt7925`, Realtek `rtw88`/`rtw89`, Qualcomm `ath11k`/`ath12k` + firmware | Broadcom Wi-Fi: `rpm-ostree install broadcom-wl`, then restart |
-| Audio | Intel/AMD HDA, SOF, USB audio, HDMI/DisplayPort audio | |
-| Controllers | Xbox (`xpad`, `xone`, `xpadneo`), PlayStation, Switch, Steam | |
-| Razer mice, keyboards | | `ujust install-openrazer` |
+| Wi-Fi and Bluetooth | Intel `iwlwifi`, MediaTek `mt7921`/`mt7925`, Realtek `rtw88`/`rtw89`, Qualcomm `ath11k`/`ath12k`, Broadcom `brcmfmac` + firmware | Broadcom cards that need `wl`: `rpm-ostree install broadcom-wl`, then restart |
+| Audio | Intel/AMD HDA, Intel SOF, Cirrus, USB audio, HDMI/DisplayPort audio | |
+| Controllers | Xbox (`xpad`, `xone`, `xpadneo`), PlayStation, Switch, Steam, 8BitDo | |
+| Gaming mice and keyboards | Solaar (Logitech), Piper/ratbagd (many brands), ckb-next (Corsair) | Razer: `ujust install-openrazer` |
+| Headsets | HeadsetControl (Logitech, SteelSeries, HyperX, Corsair): battery, sidetone, lights | |
+| RGB lighting | OpenRGB (motherboards, RAM, GPUs, peripherals) | |
+| Racing wheels | Kernel force-feedback drivers + Oversteer (Logitech, Thrustmaster, Fanatec) | |
+| Fans and AIO coolers | `lm_sensors`; CoolerControl from Gaming PC Setup | |
+| Drives | NVMe, SATA, USB; NTFS and exFAT for Windows disks and memory cards | |
+| Printers and scanners | CUPS with HP (`hplip`) and Gutenprint drivers, SANE scanners | |
+| TV and HDMI | HDMI-CEC remote control | |
 
-**Gaming PC Setup** lists every device by type (GPU, LAN, Wi-Fi, audio, USB, NVMe, Bluetooth) with the driver it uses, and says what to do for any device without one.
+**Gaming PC Setup** lists every device by type (GPU, LAN, Wi-Fi, audio, USB, NVMe, Bluetooth) with the driver it uses, recognises gaming peripherals and names the app for each, and says what to do for any device without one.
 
 ## Launchers and games
 

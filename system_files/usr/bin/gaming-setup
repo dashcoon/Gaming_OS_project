@@ -96,6 +96,13 @@ hardware_report() {
   if [ -e /sys/module/amdgpu ]; then
     ok "AMD graphics driver (amdgpu) loaded"
   fi
+  if [ -e /sys/module/i915 ] || [ -e /sys/module/xe ]; then
+    ok "Intel graphics driver loaded ($( [ -e /sys/module/xe ] && echo xe || echo i915))"
+  fi
+  if have vainfo; then
+    va="$(vainfo 2> /dev/null | sed -n 's/.*Driver version: //p' | head -1)"
+    if [ -n "$va" ]; then ok "Video acceleration (VA-API): $va"; else info "Video acceleration (VA-API) not available in this session"; fi
+  fi
   if lspci 2> /dev/null | grep -Ei 'VGA|3D' | grep -qi nvidia; then
     if [ -e /sys/module/nvidia ]; then
       ok "NVIDIA driver loaded: $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2> /dev/null | head -1)"
@@ -144,6 +151,25 @@ hardware_report() {
   pads="$(ls /dev/input/by-id/ 2> /dev/null | grep -i joystick | sed 's/-event-joystick//; s/-joystick//' | sort -u)"
   if [ -n "$pads" ]; then ok "Game controllers connected:"; while IFS= read -r p; do info "$p"; done <<< "$pads"; else info "No game controller connected right now (Xbox, PlayStation, Switch and Steam controllers are supported)"; fi
   if lsusb 2> /dev/null | grep -qi ' 1532:'; then info "Razer device found: run 'ujust install-openrazer' for lighting and DPI control"; fi
+
+  head1 "Gaming peripherals"
+  local usb found=0
+  usb="$(lsusb 2> /dev/null)"
+  peri() { # vendor-id, name, app
+    if grep -qi " $1:" <<< "$usb"; then ok "$2 device found -> $3"; found=1; fi
+  }
+  peri 046d "Logitech" "Solaar (wireless mice/keyboards), Oversteer (racing wheels), HeadsetControl (headsets)"
+  peri 1b1c "Corsair" "ckb-next (keyboards, mice), OpenRGB (lighting)"
+  peri 1532 "Razer" "ujust install-openrazer"
+  peri 1038 "SteelSeries" "Piper or HeadsetControl, OpenRGB"
+  peri 0951 "HyperX" "HeadsetControl"
+  peri 03f0 "HP/HyperX" "HeadsetControl"
+  peri 044f "Thrustmaster" "Oversteer (wheel settings)"
+  peri 0eb7 "Fanatec" "Oversteer (wheel settings)"
+  peri 1e71 "NZXT" "CoolerControl or OpenRGB"
+  peri 0b05 "ASUS ROG" "OpenRGB (lighting)"
+  peri 28de "Valve (Steam Controller/Index)" "built in"
+  [ "$found" -eq 1 ] || info "No known gaming-brand USB devices found (generic mice, keyboards and headsets work without extra drivers)"
 
   head1 "Storage"
   lsblk -d -n -o NAME,SIZE,TRAN,MODEL 2> /dev/null | grep -v '^zram\|^loop' | while IFS= read -r d; do info "$d"; done

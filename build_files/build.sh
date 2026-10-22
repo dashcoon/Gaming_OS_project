@@ -11,26 +11,21 @@ cp -avf "/ctx/system_files"/. /
 REMOVE=(
   # Android apps container
   waydroid
-  # VPN, web admin console, disc ripper, printer driver, virtual machine firmware
+  # VPN, web admin console, disc ripper, virtual machine firmware, test tools
   tailscale
   cockpit-files cockpit-networkmanager cockpit-podman cockpit-selinux cockpit-storaged cockpit-system
   makemkv
-  uld
   edk2-ovmf
   usbip
   stress-ng
   webapp-manager
   # Chinese and Japanese input methods
   ibus-mozc ibus-pinyin ibus-table-chinese-cangjie ibus-table-chinese-quick
-  # Laptop and handheld hardware tools (Framework, hybrid graphics, TDP control, Steam Deck parts)
-  framework-system fw-ectool fw-fanctrl
-  supergfxctl
-  ryzenadj plasma-applet-tdp-control
+  # Steam Deck-only hardware parts (fan, speakers, OLED panel, gyro)
   jupiter-fan-control steamdeck-dsp galileo-mura sdgyrodsu
-  iio-sensor-proxy
-  # TV remote control over HDMI (CEC)
-  libcec linux-cec inputattach-cec-units
 )
+# Laptop and peripheral support (hybrid graphics, TDP control, screen rotation, Framework,
+# TV remote over HDMI, printers) is kept so the image works on as many PCs as possible.
 
 # Several passes, because removing one extra can free another (for example the cockpit parts).
 for pass in 1 2 3; do
@@ -57,6 +52,35 @@ dnf5 install -y --skip-unavailable \
   realtek-firmware atheros-firmware brcmfmac-firmware mt7xxx-firmware iwlwifi-mvm-firmware iwlwifi-dvm-firmware \
   iwlegacy-firmware nxpwireless-firmware qcom-wwan-firmware \
   intel-audio-firmware cirrus-audio-firmware alsa-sof-firmware alsa-firmware
+
+# Extra drivers and hardware support. Installed one by one so a package that is missing,
+# already provided under another name, or in conflict is skipped instead of failing the build.
+DRIVERS=(
+  # Graphics: video decoding/encoding for AMD, Intel and NVIDIA, Intel Arc and iGPU tools
+  mesa-va-drivers mesa-vdpau-drivers libva-utils vdpauinfo
+  intel-media-driver libva-intel-media-driver intel-vpl-gpu-rt libvpl intel-gpu-tools
+  # Intel CPU thermal management (laptops and small PCs)
+  thermald
+  # Gaming mice, keyboards and headsets: Logitech (Solaar), many brands (Piper/ratbagd),
+  # Corsair (ckb-next), SteelSeries/HyperX/Logitech headsets (HeadsetControl)
+  solaar libratbag-ratbagd piper ckb-next headsetcontrol
+  # RGB lighting for motherboards, RAM, GPUs and peripherals
+  openrgb openrgb-udev-rules
+  # Racing wheels and force feedback (Logitech, Thrustmaster, Fanatec)
+  oversteer
+  # Controllers and VR/streaming devices (udev rules)
+  steam-devices game-devices-udev
+  # Drives and file systems used by games and Windows disks
+  ntfs-3g exfatprogs
+  # Printers and scanners
+  hplip gutenprint-cups sane-backends-drivers-scanners
+)
+for pkg in "${DRIVERS[@]}"; do
+  rpm -q --quiet "$pkg" && continue
+  dnf5 install -y --skip-unavailable "$pkg" || echo "Skipped $pkg (conflict or not available)"
+done
+systemctl enable thermald.service 2> /dev/null || true
+systemctl enable ratbagd.service 2> /dev/null || true
 
 # Hardware tools used by gaming-setup and handy for troubleshooting
 dnf5 install -y --skip-unavailable inxi radeontop nvtop pciutils usbutils efibootmgr zenity
