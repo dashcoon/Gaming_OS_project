@@ -90,7 +90,10 @@ jobs:
             set -e
             echo "Removed extras check:"
             for p in waydroid tailscale makemkv cockpit-system; do rpm -q --quiet $p && echo "  still installed: $p" || echo "  removed: $p"; done
-            for p in steam gamescope mesa-vulkan-drivers kernel linux-firmware; do rpm -q --quiet $p && echo "  present: $p" || { echo "  MISSING: $p"; exit 1; }; done
+            for c in steam gamescope gamemoderun gaming-setup; do command -v $c > /dev/null && echo "  present: $c" || { echo "  MISSING: $c"; exit 1; }; done
+            ls /usr/share/vulkan/icd.d/radeon_icd*.json /usr/share/vulkan/icd.d/intel_icd*.json > /dev/null && echo "  present: Vulkan drivers (AMD, Intel)" || { echo "  MISSING: Vulkan drivers"; exit 1; }
+            ls /usr/lib/modules/*/vmlinuz > /dev/null && echo "  present: kernel $(ls /usr/lib/modules | head -1)" || { echo "  MISSING: kernel"; exit 1; }
+            rpm -q --quiet linux-firmware && echo "  present: linux-firmware" || { echo "  MISSING: linux-firmware"; exit 1; }
             if [ "'"${{ matrix.variant }}"'" = gaming-os-nvidia ]; then
               nv=$(rpm -qa | grep -iE "nvidia" | grep -iE "kmod|driver" | head -3)
               [ -n "$nv" ] && echo "  NVIDIA driver: $nv" || { echo "  MISSING: NVIDIA driver"; exit 1; }
