@@ -94,6 +94,10 @@ jobs:
             ls /usr/share/vulkan/icd.d/radeon_icd*.json /usr/share/vulkan/icd.d/intel_icd*.json > /dev/null && echo "  present: Vulkan drivers (AMD, Intel)" || { echo "  MISSING: Vulkan drivers"; exit 1; }
             ls /usr/lib/modules/*/vmlinuz > /dev/null && echo "  present: kernel $(ls /usr/lib/modules | head -1)" || { echo "  MISSING: kernel"; exit 1; }
             rpm -q --quiet linux-firmware && echo "  present: linux-firmware" || { echo "  MISSING: linux-firmware"; exit 1; }
+            if grep -lE "^enabled *= *1" $(grep -l "^\[terra" /etc/yum.repos.d/*.repo 2>/dev/null) 2>/dev/null | grep -q .; then
+              dnf5 repolist --enabled 2>/dev/null | grep -i terra && { echo "  PROBLEM: Terra package sources still enabled (installer build would fail)"; exit 1; }
+            fi
+            echo "  enabled package sources: $(dnf5 repolist --enabled 2>/dev/null | tail -n +2 | awk '{print $1}' | paste -sd ' ')"
             ls /usr/lib64/dri/radeonsi_drv_video.so > /dev/null 2>&1 && echo "  present: AMD video acceleration (VA-API)" || echo "  not found: AMD VA-API driver"
             ls /usr/lib64/dri/iHD_drv_video.so > /dev/null 2>&1 && echo "  present: Intel video acceleration (VA-API)" || echo "  not found: Intel VA-API driver"
             if [ "'"${{ matrix.variant }}"'" = gaming-os-nvidia ]; then

@@ -90,7 +90,7 @@ grep -q '99-gaming-os.just' /usr/share/ublue-os/justfile || \
   echo 'import "/usr/share/ublue-os/just/99-gaming-os.just"' >> /usr/share/ublue-os/justfile
 chmod 0755 /usr/bin/gaming-setup
 
-# Switch off package sources whose signing key file is missing (Bazzite ships terra-mesa this way).
+# Switch off Bazzite's build-only Terra package sources and any source whose signing key file is missing.
 # The installer builder refuses to work with them, and the installed system updates as a whole image.
 python3 - <<'PY'
 import configparser, glob, os, platform
@@ -112,10 +112,11 @@ for path in glob.glob("/etc/yum.repos.d/*.repo"):
             continue
         keys = cp.get(sec, "gpgkey", fallback="").split()
         missing = [k for k in keys if k.startswith("file://") and not os.path.exists(expand(k)[7:])]
-        if missing:
+        if sec.startswith("terra") or missing:
             cp.set(sec, "enabled", "0")
             changed = True
-            print(f"Disabled repo {sec} in {os.path.basename(path)}: missing {missing[0]}")
+            why = "Bazzite build-only source" if sec.startswith("terra") else f"missing {missing[0]}"
+            print(f"Disabled repo {sec} in {os.path.basename(path)}: {why}")
     if changed:
         with open(path, "w") as f:
             cp.write(f, space_around_delimiters=False)
