@@ -20,7 +20,7 @@ You need a USB stick of 16 GB or more (it gets erased) and, for dual boot, free 
 
 ### 1. Get the installer
 
-- **This image:** in this repository, go to **Actions → Build disk images → Run workflow**, choose the version for your graphics card (`gaming-os` or `gaming-os-nvidia`). When it finishes (about 30 to 60 minutes), open the run and download the artifact. Unzip it to get the `.iso`.
+- **This image:** in this repository open **Actions → Build disk images**, open the latest successful run and download **gaming-os-installer-iso** (AMD/Intel graphics) or **gaming-os-nvidia-installer-iso** (NVIDIA). Unzip it to get the `.iso`. No run there yet, or want a fresh one? **Run workflow** and choose your version (about 30 to 60 minutes).
 - **Or the official Bazzite installer:** on [bazzite.gg](https://bazzite.gg) choose your graphics card brand and *Steam Gaming Mode*, download that ISO, then switch to this image after installing (step 5).
 
 ### 2. Write it to the USB stick
@@ -62,7 +62,7 @@ Switch to Desktop once (Steam → power menu → **Switch to Desktop**). **Gamin
 
 1. **Checks every piece of hardware** and the driver it uses (see [Drivers](#drivers)): CPU power management (AMD P-State), graphics card and Vulkan, displays, audio, network and Wi-Fi, Bluetooth, controllers, drives, devices without a driver, and firmware the kernel couldn't load. The report is saved as `Gaming-Setup-Report.txt` in your home folder.
 2. **Fixes common problems** after asking: switches Wi-Fi/Bluetooth on, starts Bluetooth for wireless controllers and headsets, installs firmware updates for the motherboard, SSD and peripherals, mounts your other drives at startup for extra Steam libraries, and adds a **Boot Windows** tile to Steam if Windows is also installed.
-3. **Adds the integrations you tick:** Battle.net and EA app (through Lutris), Heroic (Epic, GOG, Amazon), Lutris for other launchers, Decky Loader (Gaming Mode plugins), ProtonPlus (Proton-GE and other Proton versions), Discord, OBS Studio, CoolerControl (fan curves and AIO pumps).
+3. **Adds the integrations you tick:** Battle.net and EA app (through Lutris), Heroic (Epic, GOG, Amazon), Lutris for other launchers, Decky Loader (Gaming Mode plugins), ProtonPlus (Proton-GE and other Proton versions), Discord, OBS Studio, Oversteer (racing wheels), CoolerControl (fan curves and AIO pumps).
 
 Run it again any time: **Gaming PC Setup** in the app menu, or `ujust gaming-setup` in Konsole. **Hardware Report** (or `ujust hardware-report`) shows the check only.
 
@@ -85,7 +85,7 @@ Everything is in the image, so the PC works offline from the first boot. On Linu
 | Gaming mice and keyboards | Solaar (Logitech), Piper/ratbagd (many brands), ckb-next (Corsair) | Razer: `ujust install-openrazer` |
 | Headsets | HeadsetControl (Logitech, SteelSeries, HyperX, Corsair): battery, sidetone, lights | |
 | RGB lighting | OpenRGB (motherboards, RAM, GPUs, peripherals) | |
-| Racing wheels | Kernel force-feedback drivers + Oversteer (Logitech, Thrustmaster, Fanatec) | |
+| Racing wheels | Kernel force-feedback drivers (Logitech, Thrustmaster, Fanatec) | Oversteer settings app: tick it in Gaming PC Setup |
 | Fans and AIO coolers | `lm_sensors`; CoolerControl from Gaming PC Setup | |
 | Drives | NVMe, SATA, USB; NTFS and exFAT for Windows disks and memory cards | |
 | Printers and scanners | CUPS with HP (`hplip`) and Gutenprint drivers, SANE scanners | |

@@ -158,14 +158,14 @@ hardware_report() {
   peri() { # vendor-id, name, app
     if grep -qi " $1:" <<< "$usb"; then ok "$2 device found -> $3"; found=1; fi
   }
-  peri 046d "Logitech" "Solaar (wireless mice/keyboards), Oversteer (racing wheels), HeadsetControl (headsets)"
+  peri 046d "Logitech" "Solaar (wireless mice/keyboards), HeadsetControl (headsets), Oversteer for wheels (tick it in Gaming PC Setup)"
   peri 1b1c "Corsair" "ckb-next (keyboards, mice), OpenRGB (lighting)"
   peri 1532 "Razer" "ujust install-openrazer"
   peri 1038 "SteelSeries" "Piper or HeadsetControl, OpenRGB"
   peri 0951 "HyperX" "HeadsetControl"
   peri 03f0 "HP/HyperX" "HeadsetControl"
-  peri 044f "Thrustmaster" "Oversteer (wheel settings)"
-  peri 0eb7 "Fanatec" "Oversteer (wheel settings)"
+  peri 044f "Thrustmaster" "Oversteer (tick it in Gaming PC Setup)"
+  peri 0eb7 "Fanatec" "Oversteer (tick it in Gaming PC Setup)"
   peri 1e71 "NZXT" "CoolerControl or OpenRGB"
   peri 0b05 "ASUS ROG" "OpenRGB (lighting)"
   peri 28de "Valve (Steam Controller/Index)" "built in"
@@ -290,6 +290,7 @@ integrations() {
     "eaapp|EA app|Need for Speed, The Sims, EA games outside Steam (installs Lutris + EA app)"
     "net.lutris.Lutris|Lutris|Other launchers (Ubisoft Connect, GOG Galaxy, emulators)"
     "com.obsproject.Studio|OBS Studio|Record and stream gameplay"
+    "io.github.berarma.Oversteer|Oversteer|Racing wheel settings (Logitech, Thrustmaster, Fanatec)"
     "coolercontrol|CoolerControl|Fan curves and AIO pump control"
   )
   local choices=()

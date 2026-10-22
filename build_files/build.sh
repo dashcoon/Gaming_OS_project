@@ -66,8 +66,6 @@ DRIVERS=(
   solaar libratbag-ratbagd piper ckb-next headsetcontrol
   # RGB lighting for motherboards, RAM, GPUs and peripherals
   openrgb openrgb-udev-rules
-  # Racing wheels and force feedback (Logitech, Thrustmaster, Fanatec)
-  oversteer
   # Controllers and VR/streaming devices (udev rules)
   steam-devices game-devices-udev
   # Drives and file systems used by games and Windows disks

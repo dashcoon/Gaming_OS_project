@@ -23,16 +23,14 @@ on:
         default: amd64
         options:
           - amd64
-  pull_request:
+  push:
     branches:
       - main
     paths:
-      - './disk_config/disk.toml'
-      - './disk_config/iso.toml'
-      - './.github/workflows/build-disk.yml'
+      - 'disk_config/**'
+      - '.github/workflows/build-disk.yml'
 
 env:
-  IMAGE_NAME: ${{ inputs.variant || 'gaming-os' }} # output of build.yml, keep in sync
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
   DEFAULT_TAG: "latest"
   BIB_IMAGE: "quay.io/centos-bootc/bootc-image-builder:latest"
@@ -43,12 +41,16 @@ concurrency:
 
 jobs:
   build:
-    name: Build disk images
-    runs-on: ${{ inputs.platform == 'amd64' && 'ubuntu-26.04' || 'ubuntu-26.04-arm' }}
+    name: Build installer ISO
+    runs-on: ${{ inputs.platform == 'arm64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     strategy:
       fail-fast: false
       matrix:
         disk-type: ["anaconda-iso"]
+        # Run by hand: the chosen version. On a push: both versions.
+        variant: ${{ fromJSON(inputs.variant && format('["{0}"]', inputs.variant) || '["gaming-os","gaming-os-nvidia"]') }}
+    env:
+      IMAGE_NAME: ${{ matrix.variant }}
     permissions:
       contents: read
       packages: read
@@ -90,7 +92,7 @@ jobs:
         uses: osbuild/bootc-image-builder-action@8661cd3832544ad68c12dcde8681b13ab0f56a8d # main
         with:
           builder-image: ${{ env.BIB_IMAGE }}
-          config-file: ${{ matrix.disk-type == 'anaconda-iso' && (inputs.variant == 'gaming-os-nvidia' && './disk_config/iso-nvidia.toml' || './disk_config/iso.toml') || './disk_config/disk.toml' }}
+          config-file: ${{ matrix.disk-type == 'anaconda-iso' && (matrix.variant == 'gaming-os-nvidia' && './disk_config/iso-nvidia.toml' || './disk_config/iso.toml') || './disk_config/disk.toml' }}
           image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
@@ -100,6 +102,7 @@ jobs:
         if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
+          name: ${{ matrix.variant }}-installer-iso
           path: ${{ steps.build.outputs.output-directory }}
           if-no-files-found: error
           retention-days: 0

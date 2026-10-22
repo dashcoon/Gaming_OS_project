@@ -94,14 +94,16 @@ jobs:
             ls /usr/share/vulkan/icd.d/radeon_icd*.json /usr/share/vulkan/icd.d/intel_icd*.json > /dev/null && echo "  present: Vulkan drivers (AMD, Intel)" || { echo "  MISSING: Vulkan drivers"; exit 1; }
             ls /usr/lib/modules/*/vmlinuz > /dev/null && echo "  present: kernel $(ls /usr/lib/modules | head -1)" || { echo "  MISSING: kernel"; exit 1; }
             rpm -q --quiet linux-firmware && echo "  present: linux-firmware" || { echo "  MISSING: linux-firmware"; exit 1; }
+            ls /usr/lib64/dri/radeonsi_drv_video.so > /dev/null 2>&1 && echo "  present: AMD video acceleration (VA-API)" || echo "  not found: AMD VA-API driver"
+            ls /usr/lib64/dri/iHD_drv_video.so > /dev/null 2>&1 && echo "  present: Intel video acceleration (VA-API)" || echo "  not found: Intel VA-API driver"
             if [ "'"${{ matrix.variant }}"'" = gaming-os-nvidia ]; then
               nv=$(rpm -qa | grep -iE "nvidia" | grep -iE "kmod|driver" | head -3)
               [ -n "$nv" ] && echo "  NVIDIA driver: $nv" || { echo "  MISSING: NVIDIA driver"; exit 1; }
             fi
             echo "Driver packages:"
-            for p in linux-firmware amd-gpu-firmware intel-gpu-firmware realtek-firmware iwlwifi-mvm-firmware mt7xxx-firmware intel-media-driver libva-intel-media-driver mesa-va-drivers thermald solaar piper ckb-next openrgb oversteer hplip ntfs-3g; do rpm -q --quiet $p && echo "  installed: $p" || echo "  not available: $p"; done
+            for p in linux-firmware amd-gpu-firmware intel-gpu-firmware realtek-firmware iwlwifi-mvm-firmware mt7xxx-firmware intel-media-driver libva-intel-media-driver mesa-va-drivers thermald solaar piper ckb-next openrgb hplip ntfs-3g; do rpm -q --quiet $p && echo "  installed: $p" || echo "  not available: $p"; done
             just --justfile /usr/share/ublue-os/justfile --summary | tr " " "\n" | grep -E "^(gaming-setup|hardware-report|setup-decky)$"
-            useradd -m tester && su tester -c "gaming-setup --report --no-gui" | tail -25
+            useradd -m tester && setpriv --reuid=tester --regid=tester --init-groups env HOME=/home/tester gaming-setup --report --no-gui | tail -25
           ' 2>&1) || { echo "$out"; echo "::error title=${{ matrix.variant }} test failed::$(echo "$out" | tail -20 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"; exit 1; }
           echo "$out"
           echo "::notice title=${{ matrix.variant }} test passed::$(echo "$out" | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
