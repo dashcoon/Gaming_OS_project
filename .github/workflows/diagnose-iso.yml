@@ -1,0 +1,49 @@
+name: Diagnose installer build
+# run 2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/diagnose-iso.yml
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Free disk space
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
+
+      - name: Can the image be downloaded without logging in?
+        run: |
+          for v in gaming-os gaming-os-nvidia; do
+            if skopeo inspect --raw "docker://ghcr.io/dashcoon/$v:latest" > /dev/null 2> err.txt; then
+              echo "::notice title=$v is public::Anonymous download works"
+            else
+              echo "::warning title=$v is NOT public::$(tail -c 400 err.txt | tr '\n' ' ')"
+            fi
+          done
+
+      - name: Run the installer builder and report its output
+        run: |
+          set +e
+          sudo podman pull ghcr.io/dashcoon/gaming-os:latest > pull.txt 2>&1
+          echo "pull exit: $?" >> pull.txt
+          mkdir -p output
+          sudo podman run --rm --privileged --pull=newer --security-opt label=type:unconfined_t \
+            -v ./disk_config/iso.toml:/config.toml:ro -v ./output:/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type anaconda-iso --use-librepo=True --rootfs btrfs ghcr.io/dashcoon/gaming-os:latest > bib.txt 2>&1
+          rc=$?
+          echo "::notice title=Pull result::$(tail -c 800 pull.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          echo "::notice title=Installer builder exit $rc::$(grep -v '^\s*$' bib.txt | grep -v 'Copying blob' | tail -c 3500 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          ls -la output output/* 2>/dev/null | tail -5
