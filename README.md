@@ -1,6 +1,13 @@
 # gaming-os
 
-A lean Linux gaming image for an AMD desktop PC (AMD CPU + AMD Radeon GPU), built on [Bazzite](https://bazzite.gg) with Steam Gaming Mode.
+A lean Linux gaming image for desktop PCs, built on [Bazzite](https://bazzite.gg) with Steam Gaming Mode. Two versions, one per graphics card brand:
+
+| Version | For | Image |
+| --- | --- | --- |
+| **gaming-os** | AMD Radeon or Intel Arc graphics | `ghcr.io/dashcoon/gaming-os:latest` |
+| **gaming-os-nvidia** | NVIDIA GeForce GTX 16-series, RTX 20-series and newer | `ghcr.io/dashcoon/gaming-os-nvidia:latest` |
+
+Both work with AMD and Intel CPUs. Picked the wrong one? Gaming PC Setup notices and offers to switch.
 
 - **Boots into Steam Big Picture** like a Steam Deck. **Switch to Desktop** in the power menu opens a full KDE desktop.
 - **Uses the PC's own hardware:** AMD graphics through the Mesa drivers built into Linux, Bazzite's gaming kernel, Gamescope, GameMode and the sched-ext CPU schedulers. Windows games run through **Proton** in Steam.
@@ -13,8 +20,8 @@ You need a USB stick of 16 GB or more (it gets erased) and, for dual boot, free 
 
 ### 1. Get the installer
 
-- **This image:** in this repository, go to **Actions → Build disk images → Run workflow** (platform `amd64`). When it finishes (about 30 to 60 minutes), open the run and download the artifact. Unzip it to get the `.iso`.
-- **Or the official Bazzite installer:** on [bazzite.gg](https://bazzite.gg) choose *Desktop/Laptop → AMD → Steam Gaming Mode* and download that ISO, then switch to this image after installing (step 5).
+- **This image:** in this repository, go to **Actions → Build disk images → Run workflow**, choose the version for your graphics card (`gaming-os` or `gaming-os-nvidia`). When it finishes (about 30 to 60 minutes), open the run and download the artifact. Unzip it to get the `.iso`.
+- **Or the official Bazzite installer:** on [bazzite.gg](https://bazzite.gg) choose your graphics card brand and *Steam Gaming Mode*, download that ISO, then switch to this image after installing (step 5).
 
 ### 2. Write it to the USB stick
 
@@ -36,14 +43,15 @@ In the installer, under **Installation Destination**:
 
 Create your user, finish, and restart.
 
-**Secure Boot:** Bazzite's kernel is signed with Universal Blue's own key, which the PC has to learn once ([Bazzite docs](https://docs.bazzite.gg/General/Installation_Guide/secure_boot/)). If a blue **MOK management** screen appears, choose *Enroll MOK* → *Continue* → password `universalblue` → *Reboot*. If Linux won't start with Secure Boot on: turn Secure Boot off in the BIOS, start Linux, run `ujust enroll-secure-boot-key` in Konsole (password `universalblue`), restart and enroll on the blue screen, then turn Secure Boot back on.
+**Secure Boot:** Bazzite's kernel is signed with Universal Blue's own key, which the PC has to learn once ([Bazzite docs](https://docs.bazzite.gg/General/Installation_Guide/secure_boot/)). If a blue **MOK management** screen appears, choose *Enroll MOK* → *Continue* → password `universalblue` → *Reboot*. The NVIDIA driver also needs this key. If Linux won't start with Secure Boot on (or the NVIDIA driver doesn't load): turn Secure Boot off in the BIOS, start Linux, run `ujust enroll-secure-boot-key` in Konsole (password `universalblue`), restart and enroll on the blue screen, then turn Secure Boot back on.
 
 ### 5. Only if you used the official Bazzite installer
 
 Open **Switch to Desktop → Konsole** and run:
 
 ```bash
-sudo bootc switch ghcr.io/dashcoon/gaming-os:latest
+sudo bootc switch ghcr.io/dashcoon/gaming-os:latest          # AMD or Intel graphics
+sudo bootc switch ghcr.io/dashcoon/gaming-os-nvidia:latest   # NVIDIA graphics
 ```
 
 Then restart.
@@ -64,9 +72,10 @@ Everything is in the image, so the PC works offline from the first boot. On Linu
 
 | Hardware | Driver | Notes |
 | --- | --- | --- |
-| AMD CPU | `amd-pstate` power management, AMD microcode | Enable *CPPC* in the BIOS for amd-pstate |
+| AMD or Intel CPU | `amd-pstate` / `intel_pstate` power management, CPU microcode | AMD: enable *CPPC* in the BIOS for amd-pstate |
 | AMD Radeon GPU and displays | `amdgpu` kernel driver + Mesa (Vulkan RADV, OpenGL), FreeSync | 4K 120 Hz over HDMI: `ujust configure-amd-hdmi21` |
-| Intel or NVIDIA GPU | `i915`/`xe` or `nouveau` firmware included | For an NVIDIA card use Bazzite's NVIDIA image instead (`bazzite-deck-nvidia`) |
+| NVIDIA GeForce GPU | NVIDIA driver (open kernel modules) with Vulkan, DLSS, Reflex and G-Sync, in **gaming-os-nvidia** | GTX 16-series, RTX 20-series and newer. Older cards (GTX 10-series and earlier) are not supported for gaming |
+| Intel Arc / integrated GPU | `i915`/`xe` + Mesa, in **gaming-os** | |
 | Ethernet (LAN) | Realtek `r8169`, Intel `igc`/`e1000e`, and others in the kernel | |
 | Wi-Fi and Bluetooth | Intel `iwlwifi`, MediaTek `mt7921`/`mt7925`, Realtek `rtw88`/`rtw89`, Qualcomm `ath11k`/`ath12k` + firmware | Broadcom Wi-Fi: `rpm-ostree install broadcom-wl`, then restart |
 | Audio | Intel/AMD HDA, SOF, USB audio, HDMI/DisplayPort audio | |

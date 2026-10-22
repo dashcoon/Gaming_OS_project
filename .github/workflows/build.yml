@@ -17,7 +17,7 @@ env:
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -29,6 +29,14 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: gaming-os
+            base: ghcr.io/ublue-os/bazzite-deck:stable
+          - variant: gaming-os-nvidia
+            base: ghcr.io/ublue-os/bazzite-deck-nvidia:stable
 
     steps:
       # These stage versions are pinned by https://github.com/renovatebot/renovate
@@ -49,7 +57,7 @@ jobs:
       - name: Image Name
         id: image-name
         run: |
-          IMAGE_NAME=$(just image_name)
+          IMAGE_NAME="${{ matrix.variant }}"
 
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
 
@@ -69,6 +77,8 @@ jobs:
       # This actually builds the container image
       - name: Build Image
         id: build-image
+        env:
+          BASE_IMAGE: ${{ matrix.base }}
         run: |
           just build \
             ${IMAGE_NAME} \
@@ -80,12 +90,16 @@ jobs:
             set -e
             echo "Removed extras check:"
             for p in waydroid tailscale makemkv cockpit-system supergfxctl; do rpm -q --quiet $p && echo "  still installed: $p" || echo "  removed: $p"; done
-            for p in steam gamescope mesa-vulkan-drivers kernel; do rpm -q --quiet $p && echo "  present: $p" || { echo "  MISSING: $p"; exit 1; }; done
+            for p in steam gamescope mesa-vulkan-drivers kernel linux-firmware; do rpm -q --quiet $p && echo "  present: $p" || { echo "  MISSING: $p"; exit 1; }; done
+            if [ "'"${{ matrix.variant }}"'" = gaming-os-nvidia ]; then
+              nv=$(rpm -qa | grep -iE "nvidia" | grep -iE "kmod|driver" | head -3)
+              [ -n "$nv" ] && echo "  NVIDIA driver: $nv" || { echo "  MISSING: NVIDIA driver"; exit 1; }
+            fi
             just --justfile /usr/share/ublue-os/justfile --summary | tr " " "\n" | grep -E "^(gaming-setup|hardware-report|setup-decky)$"
             useradd -m tester && su tester -c "gaming-setup --report --no-gui" | tail -25
-          ' 2>&1) || { echo "$out"; echo "::error title=Image test failed::$(echo "$out" | tail -20 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"; exit 1; }
+          ' 2>&1) || { echo "$out"; echo "::error title=${{ matrix.variant }} test failed::$(echo "$out" | tail -20 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"; exit 1; }
           echo "$out"
-          echo "::notice title=Image test passed::$(echo "$out" | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          echo "::notice title=${{ matrix.variant }} test passed::$(echo "$out" | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
 
       # This is optional, this provides smaller delta updates
       - name: Rechunk with rpm-ostree

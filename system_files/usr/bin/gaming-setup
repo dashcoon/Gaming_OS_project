@@ -37,6 +37,9 @@ if [ "$GUI" -eq 1 ] && { [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || ! command 
 fi
 
 WARNINGS=()
+image_variant() { # nvidia | standard
+  if rpm -qa 2> /dev/null | grep -qiE '^(kmod-nvidia|nvidia-driver)'; then echo nvidia; else echo standard; fi
+}
 ok()   { printf '  OK    %s\n' "$*"; }
 warn() { printf '  WARN  %s\n' "$*"; WARNINGS+=("$*"); }
 info() { printf '        %s\n' "$*"; }
@@ -92,6 +95,15 @@ hardware_report() {
   fi
   if [ -e /sys/module/amdgpu ]; then
     ok "AMD graphics driver (amdgpu) loaded"
+  fi
+  if lspci 2> /dev/null | grep -Ei 'VGA|3D' | grep -qi nvidia; then
+    if [ -e /sys/module/nvidia ]; then
+      ok "NVIDIA driver loaded: $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2> /dev/null | head -1)"
+    elif [ "$(image_variant)" = nvidia ]; then
+      warn "NVIDIA card found but its driver is not loaded (Secure Boot key not enrolled? see the README)"
+    else
+      warn "NVIDIA card found, but this is the AMD/Intel version of the image: switch to gaming-os-nvidia (Gaming PC Setup offers it)"
+    fi
   fi
 
   head1 "Displays"
@@ -198,6 +210,18 @@ driver_table() {
 # ---------------------------------------------------------------- fixes
 fix_things() {
   head1 "Fixes"
+  local has_nv has_amd
+  has_nv="$(lspci 2> /dev/null | grep -Ei 'VGA|3D' | grep -ci nvidia)"
+  has_amd="$(lspci 2> /dev/null | grep -Ei 'VGA|3D|Display' | grep -ciE 'AMD|ATI|Radeon')"
+  if [ "$has_nv" -gt 0 ] && [ "$(image_variant)" != nvidia ]; then
+    if ask "This PC has an NVIDIA graphics card. Switch to the NVIDIA version of the system (gaming-os-nvidia) so it gets the NVIDIA driver? It downloads in the background; restart afterwards."; then
+      pkexec bootc switch ghcr.io/dashcoon/gaming-os-nvidia:latest && ok "Switching to gaming-os-nvidia: restart when it finishes" || warn "Switch failed"
+    fi
+  elif [ "$has_nv" -eq 0 ] && [ "$has_amd" -gt 0 ] && [ "$(image_variant)" = nvidia ]; then
+    if ask "This PC has no NVIDIA card. Switch to the standard AMD/Intel version of the system (gaming-os)? Restart afterwards."; then
+      pkexec bootc switch ghcr.io/dashcoon/gaming-os:latest && ok "Switching to gaming-os: restart when it finishes" || warn "Switch failed"
+    fi
+  fi
   if have rfkill && rfkill list 2> /dev/null | grep -q 'Soft blocked: yes'; then
     if ask "Wi-Fi or Bluetooth is switched off. Switch it on?"; then pkexec rfkill unblock all && ok "Wireless switched on"; fi
   fi

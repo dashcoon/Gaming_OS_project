@@ -1,3 +1,7 @@
+# Base image. gaming-os uses bazzite-deck (AMD/Intel graphics); gaming-os-nvidia passes
+# BASE_IMAGE=ghcr.io/ublue-os/bazzite-deck-nvidia:stable (NVIDIA driver included).
+ARG BASE_IMAGE=ghcr.io/ublue-os/bazzite-deck:stable
+
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 COPY build_files /
@@ -5,7 +9,7 @@ COPY system_files /system_files
 
 # Base image: Bazzite with Steam Gaming Mode (boots into Steam Big Picture, KDE desktop one click away).
 # Includes the AMD (Mesa) graphics drivers, the Bazzite gaming kernel, Gamescope and Proton support.
-FROM ghcr.io/ublue-os/bazzite-deck:stable
+FROM ${BASE_IMAGE}
 
 ### [IM]MUTABLE /opt
 ## Some bootable images, like Fedora, have /opt symlinked to /var/opt, in order to
