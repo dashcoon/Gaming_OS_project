@@ -1,6 +1,6 @@
 name: Diagnose installer build
 
-# Builds the installer for gaming-os and saves the builder's full output to the ci-logs branch (run 3).
+# Builds the installer for gaming-os and saves the builder's full output to the ci-logs branch (run 4).
 on:
   workflow_dispatch:
   push:
