@@ -96,14 +96,26 @@ jobs:
 
       - name: Build disk images
         id: build
-        uses: osbuild/bootc-image-builder-action@8661cd3832544ad68c12dcde8681b13ab0f56a8d # main
-        with:
-          builder-image: ${{ env.BIB_IMAGE }}
-          config-file: ${{ matrix.disk-type == 'anaconda-iso' && (matrix.variant == 'gaming-os-nvidia' && './disk_config/iso-nvidia.toml' || './disk_config/iso.toml') || './disk_config/disk.toml' }}
-          image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}
-          chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
-          types: ${{ matrix.disk-type }}
-          additional-args: --use-librepo=True
+        run: |
+          set -euo pipefail
+          CONFIG=./disk_config/iso.toml
+          [ "${IMAGE_NAME}" = gaming-os-nvidia ] && CONFIG=./disk_config/iso-nvidia.toml
+          mkdir -p output
+          sudo podman pull "${IMAGE_REGISTRY}/${IMAGE_NAME}:${DEFAULT_TAG}"
+          sudo podman run --rm --privileged --pull=newer --security-opt label=type:unconfined_t \
+            -v "${CONFIG}:/config.toml:ro" -v ./output:/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            "${BIB_IMAGE}" \
+            --type anaconda-iso --use-librepo=True --rootfs btrfs \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}:${DEFAULT_TAG}"
+          sudo chown -R "$(id -u):$(id -g)" output
+          ISO="$(find output -name '*.iso' | head -1)"
+          mv "$ISO" "output/${IMAGE_NAME}-$(date +%Y%m%d).iso"
+          ISO="$(find output -name '*.iso' | head -1)"
+          ( cd output && sha256sum "$(basename "$ISO")" > "$(basename "$ISO").sha256" )
+          find output -mindepth 1 -not -name '*.iso' -not -name '*.sha256' -exec rm -rf {} +
+          ls -la output
+          echo "output-directory=output" >> "$GITHUB_OUTPUT"
 
       - name: Upload disk images and Checksum to Job Artifacts
         if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
