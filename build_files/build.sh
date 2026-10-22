@@ -93,7 +93,15 @@ chmod 0755 /usr/bin/gaming-setup
 # Switch off package sources whose signing key file is missing (Bazzite ships terra-mesa this way).
 # The installer builder refuses to work with them, and the installed system updates as a whole image.
 python3 - <<'PY'
-import configparser, glob, os
+import configparser, glob, os, platform
+release = ""
+with open("/etc/os-release") as f:
+    for line in f:
+        if line.startswith("VERSION_ID="):
+            release = line.split("=", 1)[1].strip().strip('"')
+def expand(k):
+    return (k.replace("$releasever_major", release.split(".")[0]).replace("$releasever", release)
+             .replace("$basearch", platform.machine()).replace("$arch", platform.machine()))
 for path in glob.glob("/etc/yum.repos.d/*.repo"):
     cp = configparser.RawConfigParser()
     cp.optionxform = str
@@ -103,7 +111,7 @@ for path in glob.glob("/etc/yum.repos.d/*.repo"):
         if cp.get(sec, "enabled", fallback="1").strip() != "1":
             continue
         keys = cp.get(sec, "gpgkey", fallback="").split()
-        missing = [k for k in keys if k.startswith("file://") and not os.path.exists(k[7:])]
+        missing = [k for k in keys if k.startswith("file://") and not os.path.exists(expand(k)[7:])]
         if missing:
             cp.set(sec, "enabled", "0")
             changed = True
