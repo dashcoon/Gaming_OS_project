@@ -50,6 +50,14 @@ for pkg in "${REMOVE[@]}"; do
   rpm -q --quiet "$pkg" && echo "  kept: $pkg" || true
 done
 
+# Firmware for CPUs, graphics, Wi-Fi, Bluetooth, Ethernet and audio, so devices work offline from first boot.
+# (Most drivers are part of the Linux kernel; these packages hold the firmware files they load.)
+dnf5 install -y --skip-unavailable \
+  linux-firmware amd-ucode-firmware amd-gpu-firmware intel-gpu-firmware nvidia-gpu-firmware \
+  realtek-firmware atheros-firmware brcmfmac-firmware mt7xxx-firmware iwlwifi-mvm-firmware iwlwifi-dvm-firmware \
+  iwlegacy-firmware nxpwireless-firmware qcom-wwan-firmware \
+  intel-audio-firmware cirrus-audio-firmware alsa-sof-firmware alsa-firmware
+
 # Hardware tools used by gaming-setup and handy for troubleshooting
 dnf5 install -y --skip-unavailable inxi radeontop nvtop pciutils usbutils efibootmgr zenity
 

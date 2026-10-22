@@ -52,13 +52,41 @@ Then restart.
 
 Switch to Desktop once (Steam → power menu → **Switch to Desktop**). **Gaming PC Setup** opens by itself the first time and:
 
-1. **Checks every piece of hardware** and the driver it uses: CPU power management (AMD P-State), graphics card and Vulkan, displays, audio, network and Wi-Fi, Bluetooth, controllers, drives, devices without a driver, and firmware the kernel couldn't load. The report is saved as `Gaming-Setup-Report.txt` in your home folder.
+1. **Checks every piece of hardware** and the driver it uses (see [Drivers](#drivers)): CPU power management (AMD P-State), graphics card and Vulkan, displays, audio, network and Wi-Fi, Bluetooth, controllers, drives, devices without a driver, and firmware the kernel couldn't load. The report is saved as `Gaming-Setup-Report.txt` in your home folder.
 2. **Fixes common problems** after asking: switches Wi-Fi/Bluetooth on, starts Bluetooth for wireless controllers and headsets, installs firmware updates for the motherboard, SSD and peripherals, mounts your other drives at startup for extra Steam libraries, and adds a **Boot Windows** tile to Steam if Windows is also installed.
-3. **Adds the integrations you tick:** Decky Loader (Gaming Mode plugins), ProtonPlus (Proton-GE and other Proton versions), Heroic (Epic, GOG, Amazon), Lutris (Battle.net, EA app, Ubisoft Connect), Discord, OBS Studio, CoolerControl (fan curves and AIO pumps).
+3. **Adds the integrations you tick:** Battle.net and EA app (through Lutris), Heroic (Epic, GOG, Amazon), Lutris for other launchers, Decky Loader (Gaming Mode plugins), ProtonPlus (Proton-GE and other Proton versions), Discord, OBS Studio, CoolerControl (fan curves and AIO pumps).
 
 Run it again any time: **Gaming PC Setup** in the app menu, or `ujust gaming-setup` in Konsole. **Hardware Report** (or `ujust hardware-report`) shows the check only.
 
-Drivers come with the image: AMD graphics (Mesa, Vulkan), Xbox, PlayStation, Switch and Steam controllers, Wi-Fi and Bluetooth firmware, and Bazzite's gaming kernel. Razer devices: `ujust install-openrazer`. 4K 120 Hz over HDMI on AMD: `ujust configure-amd-hdmi21`.
+## Drivers
+
+Everything is in the image, so the PC works offline from the first boot. On Linux most drivers are part of the kernel; the image adds the firmware files they load.
+
+| Hardware | Driver | Notes |
+| --- | --- | --- |
+| AMD CPU | `amd-pstate` power management, AMD microcode | Enable *CPPC* in the BIOS for amd-pstate |
+| AMD Radeon GPU and displays | `amdgpu` kernel driver + Mesa (Vulkan RADV, OpenGL), FreeSync | 4K 120 Hz over HDMI: `ujust configure-amd-hdmi21` |
+| Intel or NVIDIA GPU | `i915`/`xe` or `nouveau` firmware included | For an NVIDIA card use Bazzite's NVIDIA image instead (`bazzite-deck-nvidia`) |
+| Ethernet (LAN) | Realtek `r8169`, Intel `igc`/`e1000e`, and others in the kernel | |
+| Wi-Fi and Bluetooth | Intel `iwlwifi`, MediaTek `mt7921`/`mt7925`, Realtek `rtw88`/`rtw89`, Qualcomm `ath11k`/`ath12k` + firmware | Broadcom Wi-Fi: `rpm-ostree install broadcom-wl`, then restart |
+| Audio | Intel/AMD HDA, SOF, USB audio, HDMI/DisplayPort audio | |
+| Controllers | Xbox (`xpad`, `xone`, `xpadneo`), PlayStation, Switch, Steam | |
+| Razer mice, keyboards | | `ujust install-openrazer` |
+
+**Gaming PC Setup** lists every device by type (GPU, LAN, Wi-Fi, audio, USB, NVMe, Bluetooth) with the driver it uses, and says what to do for any device without one.
+
+## Launchers and games
+
+| Launcher | How to get it | Games |
+| --- | --- | --- |
+| Steam | Built in (Gaming Mode) | Most PC games; Windows games run through Proton |
+| Battle.net | Gaming PC Setup → tick **Battle.net** (installs it through Lutris) | Diablo IV, Diablo II: Resurrected, Warcraft III: Reforged, World of Warcraft, Overwatch 2 |
+| EA app | Gaming PC Setup → tick **EA app** (installs it through Lutris) | Need for Speed, The Sims and other EA games not bought on Steam (EA games bought on Steam install from Steam) |
+| Epic, GOG, Amazon | Gaming PC Setup → tick **Heroic** | |
+
+After installing a launcher in Lutris, right-click it → **Create Steam shortcut** to start it from Gaming Mode.
+
+Before buying a game, check it on [ProtonDB](https://www.protondb.com) (how well it runs on Linux) and [Are We Anti-Cheat Yet](https://areweanticheatyet.com): a few multiplayer games block Linux with their anti-cheat. How fast games run depends on your CPU and graphics card, the same as on Windows.
 
 ## Play
 

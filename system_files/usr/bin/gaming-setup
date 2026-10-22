@@ -72,6 +72,9 @@ hardware_report() {
   [ -n "$pp" ] && info "Power profile: $pp"
   info "Memory: $(free -h | awk '/^Mem:/ {print $2}') RAM, swap: $(free -h | awk '/^Swap:/ {print $2}')"
 
+  head1 "Drivers"
+  driver_table
+
   head1 "Graphics"
   local found_gpu=0
   have lspci || warn "lspci is missing (install pciutils)"
@@ -79,7 +82,7 @@ hardware_report() {
     found_gpu=1
     slot="${line%% *}"
     name="$(lspci -s "$slot" | cut -d' ' -f2- | sed 's/^[^:]*: //')"
-    drv="$(lspci -k -s "$slot" | sed -n 's/.*Kernel driver in use: //p')"
+    drv="$(lspci -k -s "$slot" 2> /dev/null | sed -n 's/.*Kernel driver in use: //p')"
     if [ -n "$drv" ]; then ok "$name -> driver: $drv"; else warn "$name has no driver loaded"; fi
   done < <(lspci -D | grep -Ei 'VGA|3D controller|Display controller')
   [ "$found_gpu" -eq 1 ] || warn "No graphics card found"
@@ -138,7 +141,7 @@ hardware_report() {
     info "Windows (NTFS) drives found: install Linux games on a Linux drive; NTFS game libraries often break Proton"
   fi
 
-  head1 "Drivers and firmware"
+  head1 "Firmware and other devices"
   nodrv="$(lspci -k 2> /dev/null | awk '/^[0-9a-f]/{if(dev!="" && !drv) print dev; dev=$0; drv=0} /Kernel driver in use/{drv=1} END{if(dev!="" && !drv) print dev}' | grep -Eiv 'host bridge|pci bridge|isa bridge|smbus|signal processing|non-essential|system peripheral|dummy|RAM memory|encryption|IOMMU' )"
   if [ -n "$nodrv" ]; then warn "Devices without a driver:"; while IFS= read -r d; do info "${d#* }"; done <<< "$nodrv"; else ok "Every important PCI device has a driver"; fi
   fw="$(journalctl -k -b --no-pager 2> /dev/null | grep -Ei 'firmware.*(failed|not found|missing)|Direct firmware load.*failed' | sed 's/^.*kernel: //' | sort -u | head -5)"
@@ -146,6 +149,50 @@ hardware_report() {
 
   head1 "Summary"
   if [ "${#WARNINGS[@]}" -eq 0 ]; then echo "  Everything looks good."; else echo "  ${#WARNINGS[@]} item(s) to look at (WARN above)."; fi
+}
+
+# One line per device: category, name, driver in use (or what to do when there is none)
+driver_table() {
+  if ! have lspci; then warn "lspci is missing (install pciutils)"; return 0; fi
+  local cpu_mc
+  cpu_mc="$(grep -m1 '^microcode' /proc/cpuinfo 2> /dev/null | awk '{print $3}')"
+  if [ -n "$cpu_mc" ]; then ok "CPU      microcode revision $cpu_mc loaded"; fi
+  [ -r /sys/devices/system/cpu/amd_pstate/status ] && ok "CPU      power driver: amd-pstate ($(cat /sys/devices/system/cpu/amd_pstate/status))"
+  local slot class name drv cat
+  while read -r slot class _; do
+    class="${class%:}"
+    case "$class" in
+      0300|0302|0380) cat="GPU     " ;;
+      0200) cat="LAN     " ;;
+      0280) cat="Wi-Fi   " ;;
+      0403) cat="Audio   " ;;
+      0c03) cat="USB     " ;;
+      0108) cat="NVMe    " ;;
+      0d11) cat="BT      " ;;
+      *) continue ;;
+    esac
+    name="$(lspci -s "$slot" 2> /dev/null | sed 's/^[^:]*:[^:]*: //' | cut -c1-70)"
+    drv="$(lspci -k -s "$slot" 2> /dev/null | sed -n 's/.*Kernel driver in use: //p')"
+    if [ -n "$drv" ]; then
+      ok "$cat $name -> $drv"
+    else
+      warn "$cat $name -> NO DRIVER"
+      case "$class" in
+        0280) info "  Broadcom Wi-Fi: run 'rpm-ostree install broadcom-wl' and restart. Others: note the ID $(lspci -n -s "$slot" | awk '{print $3}') and search it with 'linux driver'." ;;
+        0200) info "  Use another network port or a USB Ethernet adapter, and note the ID $(lspci -n -s "$slot" | awk '{print $3}')." ;;
+      esac
+    fi
+  done < <(lspci -Dn 2> /dev/null | awk '{print $1, $2}')
+  # USB Wi-Fi and Ethernet adapters
+  local n dev
+  for n in /sys/class/net/*; do
+    dev="$(basename "$n")"
+    [ -e "$n/device" ] || continue
+    case "$(readlink -f "$n/device")" in */usb*) ;; *) continue ;; esac
+    drv="$(basename "$(readlink -f "$n/device/driver")")"
+    if [ -d "$n/wireless" ]; then ok "Wi-Fi    USB adapter $dev -> $drv"; else ok "LAN      USB adapter $dev -> $drv"; fi
+  done
+  if lsusb 2> /dev/null | grep -qiE 'bluetooth'; then ok "BT       USB Bluetooth adapter found"; fi
 }
 
 # ---------------------------------------------------------------- fixes
@@ -189,7 +236,9 @@ integrations() {
     "com.vysp3r.ProtonPlus|ProtonPlus|Extra Proton versions such as Proton-GE for games that need them"
     "com.heroicgameslauncher.hgl|Heroic Games Launcher|Epic Games, GOG and Amazon games"
     "com.discordapp.Discord|Discord|Voice and text chat"
-    "net.lutris.Lutris|Lutris|Battle.net, EA app, Ubisoft Connect and other launchers"
+    "battlenet|Battle.net|Diablo, Warcraft, Overwatch, Call of Duty (installs Lutris + Battle.net)"
+    "eaapp|EA app|Need for Speed, The Sims, EA games outside Steam (installs Lutris + EA app)"
+    "net.lutris.Lutris|Lutris|Other launchers (Ubisoft Connect, GOG Galaxy, emulators)"
     "com.obsproject.Studio|OBS Studio|Record and stream gameplay"
     "coolercontrol|CoolerControl|Fan curves and AIO pump control"
   )
@@ -210,6 +259,13 @@ integrations() {
   [ "${#choices[@]}" -gt 0 ] && have notify-send && notify-send "Gaming PC Setup" "Installing ${#choices[@]} item(s). This can take a few minutes."
   for id in "${choices[@]}"; do
     case "$id" in
+      battlenet|eaapp)
+        flatpak_has net.lutris.Lutris || flatpak install -y --noninteractive flathub net.lutris.Lutris
+        slug="battlenet-standard"; [ "$id" = eaapp ] && slug="ea-app-standard"
+        if flatpak_has net.lutris.Lutris; then
+          setsid flatpak run net.lutris.Lutris "lutris:install/$slug" > /dev/null 2>&1 < /dev/null &
+          ok "Lutris opened the $slug installer: click Install and follow the steps"
+        else warn "Lutris install failed"; fi ;;
       decky) ujust setup-decky install && ok "Decky Loader installed" || warn "Decky Loader install failed" ;;
       coolercontrol) ujust install-coolercontrol && ok "CoolerControl set up" || warn "CoolerControl setup failed" ;;
       *)
