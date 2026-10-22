@@ -1,6 +1,6 @@
 name: Diagnose installer build
-# run 2
 
+# Builds the installer for gaming-os and saves the builder's full output to the ci-logs branch.
 on:
   workflow_dispatch:
   push:
@@ -9,41 +9,43 @@ on:
       - .github/workflows/diagnose-iso.yml
 
 permissions:
-  contents: read
+  contents: write
   packages: read
 
 jobs:
   diagnose:
     runs-on: ubuntu-26.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Free disk space
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
-      - name: Can the image be downloaded without logging in?
-        run: |
-          for v in gaming-os gaming-os-nvidia; do
-            if skopeo inspect --raw "docker://ghcr.io/dashcoon/$v:latest" > /dev/null 2> err.txt; then
-              echo "::notice title=$v is public::Anonymous download works"
-            else
-              echo "::warning title=$v is NOT public::$(tail -c 400 err.txt | tr '\n' ' ')"
-            fi
-          done
-
-      - name: Run the installer builder and report its output
+      - name: Run the installer builder
         run: |
           set +e
-          sudo podman pull ghcr.io/dashcoon/gaming-os:latest > pull.txt 2>&1
-          echo "pull exit: $?" >> pull.txt
-          mkdir -p output
+          mkdir -p output logs
+          df -h / > logs/disk.txt
+          sudo podman pull ghcr.io/dashcoon/gaming-os:latest > logs/pull.txt 2>&1
+          echo "pull exit: $?" >> logs/pull.txt
           sudo podman run --rm --privileged --pull=newer --security-opt label=type:unconfined_t \
             -v ./disk_config/iso.toml:/config.toml:ro -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
-            --type anaconda-iso --use-librepo=True --rootfs btrfs ghcr.io/dashcoon/gaming-os:latest > bib.txt 2>&1
-          rc=$?
-          echo "::notice title=Pull result::$(tail -c 800 pull.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
-          echo "::notice title=Installer builder exit $rc::$(grep -v '^\s*$' bib.txt | grep -v 'Copying blob' | tail -c 3500 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
-          ls -la output output/* 2>/dev/null | tail -5
+            --type anaconda-iso --use-librepo=True --rootfs btrfs ghcr.io/dashcoon/gaming-os:latest > logs/bib.txt 2>&1
+          echo "exit: $?" >> logs/bib.txt
+          df -h / >> logs/disk.txt
+          ls -laR output > logs/output.txt 2>&1
+
+      - name: Save logs to the ci-logs branch
+        if: always()
+        run: |
+          grep -v 'Copying blob' logs/bib.txt | tail -400 > logs/bib-tail.txt
+          rm logs/bib.txt
+          cd logs
+          git init -q -b ci-logs
+          git config user.name "ci-logs"
+          git config user.email "noreply@users.noreply.github.com"
+          git add -A && git commit -q -m "Installer build logs ${GITHUB_RUN_ID}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" ci-logs
