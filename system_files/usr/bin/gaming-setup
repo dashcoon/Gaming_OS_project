@@ -57,7 +57,8 @@ hardware_report() {
 
   head1 "System"
   info "$(. /etc/os-release; echo "${PRETTY_NAME:-Linux}")"
-  info "Image: $(bootc status --format=json 2> /dev/null | grep -o '"image":"[^"]*"' | head -1 | cut -d'"' -f4)"
+  img="$(bootc status --format=json 2> /dev/null | grep -o '"image":"[^"]*"' | head -1 | cut -d'"' -f4)"
+  [ -n "$img" ] && info "Image: $img"
   info "Kernel: $(uname -r)"
 
   head1 "Processor"
@@ -67,12 +68,14 @@ hardware_report() {
   elif grep -qi amd /proc/cpuinfo; then
     warn "AMD P-State is not active (older CPU or disabled in BIOS: enable CPPC in the BIOS)"
   fi
-  info "Power profile: $(powerprofilesctl get 2> /dev/null || cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2> /dev/null)"
+  pp="$(powerprofilesctl get 2> /dev/null || cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2> /dev/null)"
+  [ -n "$pp" ] && info "Power profile: $pp"
   info "Memory: $(free -h | awk '/^Mem:/ {print $2}') RAM, swap: $(free -h | awk '/^Swap:/ {print $2}')"
 
   head1 "Graphics"
   local found_gpu=0
-  while IFS= read -r line; do
+  have lspci || warn "lspci is missing (install pciutils)"
+  have lspci && while IFS= read -r line; do
     found_gpu=1
     slot="${line%% *}"
     name="$(lspci -s "$slot" | cut -d' ' -f2- | sed 's/^[^:]*: //')"
