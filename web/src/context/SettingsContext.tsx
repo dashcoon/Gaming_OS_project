@@ -11,11 +11,18 @@ export const DEFAULT_SETTINGS: Settings = {
   performanceMode: 'balanced',
   showFpsOverlay: true,
   iconClickMode: 'double',
+  showWidgets: true,
+  bootAnimation: true,
   masterVolume: 72,
   gameVolume: 85,
   chatVolume: 60,
   muted: false,
   spatialAudio: true,
+  wifiEnabled: true,
+  bluetoothEnabled: true,
+  doNotDisturb: false,
+  nightLight: false,
+  brightness: 100,
 };
 
 function loadSettings(): Settings {

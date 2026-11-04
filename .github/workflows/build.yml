@@ -11,6 +11,8 @@ on:
       - main
     paths-ignore:
       - '**/README.md'
+      - 'web/**'
+      - '.github/workflows/web.yml'
   workflow_dispatch:
 
 env:

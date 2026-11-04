@@ -8,6 +8,8 @@ import {
   Gamepad2,
   MemoryStick,
   MonitorPlay,
+  Search,
+  SlidersHorizontal,
   Thermometer,
   Volume1,
   Volume2,
@@ -15,6 +17,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
+import ControlCenter from '@/components/ControlCenter';
 import { APP_META } from '@/data/apps';
 import { useSettings } from '@/context/SettingsContext';
 import { TOTAL_RAM_GB, useSystem } from '@/context/SystemContext';
@@ -23,7 +26,7 @@ import { useBattery, useOnline } from '@/hooks/useBattery';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useClock } from '@/hooks/useClock';
 
-type MenuId = 'logo' | 'stats' | 'volume' | null;
+type MenuId = 'logo' | 'stats' | 'volume' | 'control' | null;
 
 function meterColor(value: number) {
   if (value >= 85) return 'bg-rose-500';
@@ -49,8 +52,8 @@ function StatChip({ icon: Icon, label, value }: { icon: typeof Cpu; label: strin
 
 /** Top status bar: system menu + active app on the left, live stats and indicators on the right. */
 export default function TopBar() {
-  const { windows, activeId, openApp, minimizeAll, closeAll } = useWindowManager();
-  const { stats, running, games, stopGame } = useSystem();
+  const { windows, activeId, openApp, minimizeAll, closeAll, openSpotlight, lockScreen, restart } = useWindowManager();
+  const { stats, running, games, stopGame, notificationLog } = useSystem();
   const { settings, updateSettings } = useSettings();
   const battery = useBattery();
   const online = useOnline();
@@ -60,6 +63,7 @@ export default function TopBar() {
   const closeMenu = useCallback(() => setMenu(null), []);
   useClickOutside(barRef, menu !== null, closeMenu);
 
+  const connected = online && settings.wifiEnabled;
   const toggle = (id: MenuId) => setMenu((m) => (m === id ? null : id));
   const activeTitle = activeId ? APP_META[activeId].title : 'Desktop';
   const runningGame = running ? games.find((g) => g.id === running.gameId) : undefined;
@@ -100,6 +104,14 @@ export default function TopBar() {
               </MenuItem>
               <MenuItem
                 onClick={() => {
+                  closeMenu();
+                  openSpotlight();
+                }}
+              >
+                Search…
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
                   openApp('settings');
                   closeMenu();
                 }}
@@ -128,7 +140,16 @@ export default function TopBar() {
               <MenuDivider />
               <MenuItem
                 onClick={() => {
-                  window.location.reload();
+                  closeMenu();
+                  lockScreen();
+                }}
+              >
+                Lock Screen
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  closeMenu();
+                  restart();
                 }}
               >
                 Restart…
@@ -187,8 +208,8 @@ export default function TopBar() {
           )}
         </div>
 
-        <span className={`${item} hidden sm:block`} title={online ? 'Connected' : 'Offline'}>
-          {online ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4 text-rose-400" />}
+        <span className={`${item} hidden sm:block`} title={connected ? 'Connected' : 'Offline'}>
+          {connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4 text-rose-400" />}
         </span>
 
         <div className="relative">
@@ -234,6 +255,30 @@ export default function TopBar() {
           <span className="hidden font-mono text-[11px] sm:inline">{Math.round(battery.level * 100)}%</span>
         </span>
 
+        <button type="button" onClick={openSpotlight} className={item} aria-label="Search" title="Search (Ctrl+Space)">
+          <Search className="h-4 w-4" />
+        </button>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => toggle('control')}
+            className={`${item} relative ${menu === 'control' ? 'bg-white/10' : ''}`}
+            aria-label="Control Center"
+            title="Control Center"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {notificationLog.length > 0 && (
+              <span className="absolute right-1 top-0.5 h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_rgb(var(--accent))]" />
+            )}
+          </button>
+          {menu === 'control' && (
+            <Menu align="right" width="w-auto">
+              <ControlCenter />
+            </Menu>
+          )}
+        </div>
+
         <span className="px-2 font-medium tabular-nums">
           <span className="hidden md:inline">
             {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
@@ -273,7 +318,7 @@ function Menu({
   return (
     <div
       role="menu"
-      className={`glass-strong absolute top-7 ${align === 'right' ? 'right-0' : 'left-0'} ${width} animate-fade-in rounded-lg py-1 shadow-2xl`}
+      className={`popover absolute top-7 ${align === 'right' ? 'right-0' : 'left-0'} ${width} animate-fade-in rounded-lg py-1 shadow-2xl`}
     >
       {children}
     </div>

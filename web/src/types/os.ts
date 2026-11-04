@@ -3,8 +3,8 @@ import type { LucideIcon } from 'lucide-react';
 
 export type AppId = 'steam' | 'firefox' | 'terminal' | 'files' | 'settings' | 'about';
 
-/** Half-screen snap zones (Windows 11 style). Full-screen snap uses `isMaximized`. */
-export type SnapZone = 'left' | 'right';
+/** Half- and quarter-screen snap zones (Windows 11 style). Full-screen snap uses `isMaximized`. */
+export type SnapZone = 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 export interface Point {
   x: number;

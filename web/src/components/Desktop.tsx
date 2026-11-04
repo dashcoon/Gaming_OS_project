@@ -1,12 +1,18 @@
-import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
-import Dock from '@/components/Dock';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import BootScreen from '@/components/BootScreen';
+import DesktopContextMenu from '@/components/DesktopContextMenu';
 import DesktopIcons from '@/components/DesktopIcons';
+import Dock from '@/components/Dock';
 import FpsOverlay from '@/components/FpsOverlay';
+import LockScreen from '@/components/LockScreen';
 import Notifications from '@/components/Notifications';
+import Spotlight from '@/components/Spotlight';
 import TopBar from '@/components/TopBar';
 import Wallpaper from '@/components/Wallpaper';
-import Window, { DOCK_RESERVE, type SnapTarget } from '@/components/Window';
+import Widgets from '@/components/Widgets';
+import Window, { snapBounds, type SnapTarget } from '@/components/Window';
 import { APPS } from '@/components/apps/registry';
+import { useSettings } from '@/context/SettingsContext';
 import { WindowManagerContext, type WindowManagerValue } from '@/context/WindowManagerContext';
 import { initialWindowsState, windowReducer } from '@/hooks/windowReducer';
 import { useViewport } from '@/hooks/useViewport';
@@ -14,12 +20,25 @@ import type { AppId } from '@/types/os';
 
 const TOPBAR_HEIGHT = 32;
 
-/** Desktop orchestrator: owns window state and composes wallpaper, icons, windows, dock and top bar. */
+type SessionPhase = 'boot' | 'lock' | 'desktop';
+
+/** `?session=desktop` (or `lock`) skips the boot animation, e.g. for automated tests. */
+function initialPhase(bootAnimation: boolean): SessionPhase {
+  const requested = new URLSearchParams(window.location.search).get('session');
+  if (requested === 'desktop' || requested === 'lock' || requested === 'boot') return requested;
+  return bootAnimation ? 'boot' : 'lock';
+}
+
+/** Desktop orchestrator: owns window state and session phase, composes every shell surface. */
 export default function Desktop() {
+  const { settings } = useSettings();
   const [state, dispatch] = useReducer(windowReducer, initialWindowsState);
+  const [phase, setPhase] = useState<SessionPhase>(() => initialPhase(settings.bootAnimation));
   const [bouncing, setBouncing] = useState<Set<AppId>>(new Set());
   const [snapPreview, setSnapPreview] = useState<SnapTarget>(null);
   const [clearToken, setClearToken] = useState(0);
+  const [spotlight, setSpotlight] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const viewport = useViewport();
   const area = useMemo(
     () => ({ width: viewport.width, height: viewport.height - TOPBAR_HEIGHT }),
@@ -55,6 +74,19 @@ export default function Desktop() {
     [area, bounce],
   );
 
+  const lockScreen = useCallback(() => {
+    setSpotlight(false);
+    setContextMenu(null);
+    setPhase('lock');
+  }, []);
+
+  const restart = useCallback(() => {
+    setSpotlight(false);
+    setContextMenu(null);
+    dispatch({ type: 'closeAll' });
+    setPhase('boot');
+  }, []);
+
   const wm = useMemo<WindowManagerValue>(
     () => ({
       windows: state.windows,
@@ -66,9 +98,35 @@ export default function Desktop() {
       toggleMaximize: (id) => dispatch({ type: 'toggleMaximize', id }),
       minimizeAll: () => dispatch({ type: 'minimizeAll' }),
       closeAll: () => dispatch({ type: 'closeAll' }),
+      openSpotlight: () => setSpotlight(true),
+      lockScreen,
+      restart,
     }),
-    [state.windows, activeId, openApp],
+    [state.windows, activeId, openApp, lockScreen, restart],
   );
+
+  // Global keyboard shortcuts.
+  useEffect(() => {
+    if (phase !== 'desktop') return;
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && (e.code === 'Space' || e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        setSpotlight((s) => !s);
+      } else if (mod && e.altKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        lockScreen();
+      } else if (mod && e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        openApp('terminal');
+      } else if (mod && e.altKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        dispatch({ type: 'minimizeAll' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, lockScreen, openApp]);
 
   /** Dock click: open → restore if minimized → minimize if already focused → otherwise focus. */
   const onDockClick = (id: AppId) => {
@@ -79,8 +137,8 @@ export default function Desktop() {
     dispatch({ type: 'focus', id });
   };
 
-  const half = Math.round(area.width / 2);
-  const previewHeight = area.height - DOCK_RESERVE;
+  const preview = snapPreview ? snapBounds(snapPreview, area) : null;
+  const dim = (100 - settings.brightness) / 100;
 
   return (
     <WindowManagerContext.Provider value={wm}>
@@ -92,17 +150,23 @@ export default function Desktop() {
           className="absolute inset-x-0 bottom-0"
           style={{ top: TOPBAR_HEIGHT }}
           onClick={() => setClearToken((t) => t + 1)}
+          onContextMenu={(e) => {
+            if (e.target !== e.currentTarget) return;
+            e.preventDefault();
+            setContextMenu({ x: e.clientX, y: e.clientY });
+          }}
         >
           <DesktopIcons onLaunch={openApp} clearToken={clearToken} />
+          {settings.showWidgets && <Widgets />}
 
-          {snapPreview && (
+          {preview && (
             <div
               className="pointer-events-none absolute rounded-xl border-2 border-accent/60 bg-accent/15 backdrop-blur-sm transition-all duration-150"
               style={{
-                left: snapPreview === 'right' ? half + 6 : 6,
-                top: 6,
-                width: (snapPreview === 'maximize' ? area.width : half) - 12,
-                height: previewHeight - 12,
+                left: preview.x + 6,
+                top: preview.y + 6,
+                width: preview.width - 12,
+                height: preview.height - 12,
                 zIndex: state.topZ + 1,
               }}
             />
@@ -134,7 +198,32 @@ export default function Desktop() {
 
         <FpsOverlay />
         <Notifications />
-        <Dock windows={state.windows} activeId={activeId} bouncing={bouncing} onAppClick={onDockClick} />
+        <Dock
+          windows={state.windows}
+          activeId={activeId}
+          bouncing={bouncing}
+          onAppClick={onDockClick}
+          onLauncherClick={() => setSpotlight(true)}
+        />
+
+        {contextMenu && <DesktopContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} />}
+        {spotlight && phase === 'desktop' && <Spotlight onClose={() => setSpotlight(false)} />}
+
+        {phase === 'lock' && <LockScreen onUnlock={() => setPhase('desktop')} />}
+        {phase === 'boot' && <BootScreen onDone={() => setPhase('lock')} />}
+
+        {/* Display filters from Control Center: brightness and night light. */}
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-[10002] bg-black transition-opacity duration-300"
+          style={{ opacity: dim * 0.75 }}
+        />
+        <div
+          aria-hidden
+          className={`pointer-events-none fixed inset-0 z-[10002] bg-orange-400/15 mix-blend-multiply transition-opacity duration-500 ${
+            settings.nightLight ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
       </div>
     </WindowManagerContext.Provider>
   );

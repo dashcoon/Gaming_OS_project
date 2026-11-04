@@ -34,14 +34,47 @@ interface WindowProps {
 
 /** Bounds a window actually occupies, taking maximize/snap into account. */
 export function effectiveBounds(win: WindowState, area: Size): Bounds {
-  const fullHeight = Math.max(200, area.height - DOCK_RESERVE);
-  if (win.isMaximized) return { x: 0, y: 0, width: area.width, height: fullHeight };
-  if (win.snap) {
-    const half = Math.round(area.width / 2);
-    return { x: win.snap === 'left' ? 0 : half, y: 0, width: area.width - half, height: fullHeight };
-  }
+  if (win.isMaximized) return snapBounds('maximize', area);
+  if (win.snap) return snapBounds(win.snap, area);
   return { ...win.position, ...win.size };
 }
+
+/** Screen area covered by a snap target (also used for the drag preview). */
+export function snapBounds(target: Exclude<SnapTarget, null>, area: Size): Bounds {
+  const fullHeight = Math.max(200, area.height - DOCK_RESERVE);
+  const halfW = Math.round(area.width / 2);
+  const halfH = Math.round(fullHeight / 2);
+  switch (target) {
+    case 'maximize':
+      return { x: 0, y: 0, width: area.width, height: fullHeight };
+    case 'left':
+      return { x: 0, y: 0, width: halfW, height: fullHeight };
+    case 'right':
+      return { x: halfW, y: 0, width: area.width - halfW, height: fullHeight };
+    case 'top-left':
+      return { x: 0, y: 0, width: halfW, height: halfH };
+    case 'top-right':
+      return { x: halfW, y: 0, width: area.width - halfW, height: halfH };
+    case 'bottom-left':
+      return { x: 0, y: halfH, width: halfW, height: fullHeight - halfH };
+    case 'bottom-right':
+      return { x: halfW, y: halfH, width: area.width - halfW, height: fullHeight - halfH };
+  }
+}
+
+/** Layouts offered by the snap-layout flyout on the green button. */
+const SNAP_LAYOUTS: { target: Exclude<SnapTarget, null>; label: string; cells: string }[] = [
+  { target: 'maximize', label: 'Maximize', cells: 'col-span-2 row-span-2' },
+  { target: 'left', label: 'Left half', cells: 'col-start-1 row-span-2' },
+  { target: 'right', label: 'Right half', cells: 'col-start-2 row-span-2' },
+  { target: 'top-left', label: 'Top left', cells: 'col-start-1 row-start-1' },
+  { target: 'top-right', label: 'Top right', cells: 'col-start-2 row-start-1' },
+  { target: 'bottom-left', label: 'Bottom left', cells: 'col-start-1 row-start-2' },
+  { target: 'bottom-right', label: 'Bottom right', cells: 'col-start-2 row-start-2' },
+];
+
+/** Corner distance (px) that turns an edge snap into a quarter snap. */
+const CORNER_ZONE = 120;
 
 const RESIZE_HANDLES: { dir: ResizeDir; className: string }[] = [
   { dir: 'n', className: 'top-0 left-3 right-3 h-1.5 cursor-ns-resize' },
@@ -70,6 +103,8 @@ export default function Window({
   onSnapPreview,
 }: WindowProps) {
   const [interacting, setInteracting] = useState(false);
+  const [flyout, setFlyout] = useState(false);
+  const flyoutTimer = useRef<number>();
   const snapTarget = useRef<SnapTarget>(null);
   const bounds = effectiveBounds(win, area);
   const Content = win.component;
@@ -77,9 +112,15 @@ export default function Window({
 
   const detectSnap = useCallback(
     (clientX: number, clientY: number): SnapTarget => {
-      if (clientY - areaTop <= SNAP_EDGE) return 'maximize';
-      if (clientX <= SNAP_EDGE) return 'left';
-      if (clientX >= window.innerWidth - SNAP_EDGE) return 'right';
+      const atTop = clientY - areaTop <= SNAP_EDGE;
+      const atLeft = clientX <= SNAP_EDGE;
+      const atRight = clientX >= window.innerWidth - SNAP_EDGE;
+      const nearTop = clientY - areaTop <= CORNER_ZONE;
+      const nearBottom = clientY >= window.innerHeight - DOCK_RESERVE - CORNER_ZONE / 2;
+      if (atLeft || (atTop && clientX <= CORNER_ZONE)) return nearTop ? 'top-left' : nearBottom ? 'bottom-left' : 'left';
+      if (atRight || (atTop && clientX >= window.innerWidth - CORNER_ZONE))
+        return nearTop ? 'top-right' : nearBottom ? 'bottom-right' : 'right';
+      if (atTop) return 'maximize';
       return null;
     },
     [areaTop],
@@ -221,19 +262,60 @@ export default function Window({
             <TrafficLight color="bg-[#febc2e]" hover="group-hover/lights:bg-[#febc2e]" active={isActive} label="Minimize" onClick={onMinimize}>
               <Minus className="h-2 w-2" strokeWidth={3.5} />
             </TrafficLight>
-            <TrafficLight
-              color="bg-[#28c840]"
-              hover="group-hover/lights:bg-[#28c840]"
-              active={isActive}
-              label={win.isMaximized ? 'Restore' : 'Maximize'}
-              onClick={onToggleMaximize}
+            <span
+              className="relative flex"
+              onMouseEnter={() => {
+                flyoutTimer.current = window.setTimeout(() => setFlyout(true), 450);
+              }}
+              onMouseLeave={() => {
+                window.clearTimeout(flyoutTimer.current);
+                setFlyout(false);
+              }}
             >
-              {win.isMaximized ? (
-                <Minimize2 className="h-2 w-2" strokeWidth={3.5} />
-              ) : (
-                <Maximize2 className="h-2 w-2" strokeWidth={3.5} />
+              <TrafficLight
+                color="bg-[#28c840]"
+                hover="group-hover/lights:bg-[#28c840]"
+                active={isActive}
+                label={win.isMaximized ? 'Restore' : 'Maximize'}
+                onClick={onToggleMaximize}
+              >
+                {win.isMaximized ? (
+                  <Minimize2 className="h-2 w-2" strokeWidth={3.5} />
+                ) : (
+                  <Maximize2 className="h-2 w-2" strokeWidth={3.5} />
+                )}
+              </TrafficLight>
+              {flyout && (
+                <div
+                  role="menu"
+                  aria-label="Snap layouts"
+                  className="popover absolute left-[-8px] top-4 z-30 w-44 animate-fade-in rounded-lg p-2 shadow-2xl"
+                >
+                  <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Snap layout</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[SNAP_LAYOUTS.slice(0, 1), SNAP_LAYOUTS.slice(1, 3), SNAP_LAYOUTS.slice(3)].map((group, gi) => (
+                      <div key={gi} className="grid h-10 grid-cols-2 grid-rows-2 gap-0.5 rounded bg-slate-800/80 p-0.5">
+                        {group.map((l) => (
+                          <button
+                            key={l.target}
+                            type="button"
+                            role="menuitem"
+                            aria-label={l.label}
+                            title={l.label}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFlyout(false);
+                              onSnap(l.target);
+                            }}
+                            className={`rounded-sm bg-slate-600/70 transition-colors hover:bg-accent ${l.cells}`}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-            </TrafficLight>
+            </span>
           </div>
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[13px] font-medium">
             <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-accent' : 'text-slate-500'}`} />

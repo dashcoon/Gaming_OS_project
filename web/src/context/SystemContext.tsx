@@ -28,7 +28,17 @@ export interface OSNotification {
   title: string;
   body: string;
   icon?: LucideIcon;
+  time: Date;
 }
+
+/** Recent samples for the sparkline graphs (oldest first). */
+export interface StatsHistory {
+  cpu: number[];
+  gpu: number[];
+  ram: number[];
+}
+
+const HISTORY_LENGTH = 40;
 
 export interface RunningGame {
   gameId: string;
@@ -38,6 +48,7 @@ export interface RunningGame {
 
 interface SystemContextValue {
   stats: SystemStats;
+  history: StatsHistory;
   bootTime: number;
   games: Game[];
   /** Install progress 0–100 for games currently downloading. */
@@ -48,9 +59,13 @@ interface SystemContextValue {
   uninstallGame: (gameId: string) => void;
   launchGame: (gameId: string) => boolean;
   stopGame: () => void;
+  /** Toasts currently on screen. */
   notifications: OSNotification[];
-  notify: (n: Omit<OSNotification, 'id'>) => void;
+  /** Every notification this session, newest first (Control Center). */
+  notificationLog: OSNotification[];
+  notify: (n: Omit<OSNotification, 'id' | 'time'>) => void;
   dismissNotification: (id: number) => void;
+  clearNotificationLog: () => void;
 }
 
 const SystemContext = createContext<SystemContextValue | null>(null);
@@ -75,14 +90,26 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   const [downloads, setDownloads] = useState<Record<string, number>>({});
   const [running, setRunning] = useState<RunningGame | null>(null);
   const [notifications, setNotifications] = useState<OSNotification[]>([]);
+  const [notificationLog, setNotificationLog] = useState<OSNotification[]>([]);
+  const [history, setHistory] = useState<StatsHistory>({ cpu: [], gpu: [], ram: [] });
   const [stats, setStats] = useState<SystemStats>({ cpu: 9, gpu: 4, ram: 31, cpuTemp: 42, gpuTemp: 38, fps: 0 });
+  const statsRef = useRef(stats);
   const nextId = useRef(1);
 
-  const notify = useCallback((n: Omit<OSNotification, 'id'>) => {
+  const dndRef = useRef(settings.doNotDisturb);
+  dndRef.current = settings.doNotDisturb;
+
+  const notify = useCallback((n: Omit<OSNotification, 'id' | 'time'>) => {
     const id = nextId.current++;
-    setNotifications((prev) => [...prev.slice(-3), { ...n, id }]);
+    const entry = { ...n, id, time: new Date() };
+    setNotificationLog((prev) => [entry, ...prev].slice(0, 50));
+    // Do Not Disturb keeps notifications in the log but shows no toast.
+    if (dndRef.current) return;
+    setNotifications((prev) => [...prev.slice(-3), entry]);
     window.setTimeout(() => setNotifications((prev) => prev.filter((x) => x.id !== id)), 5000);
   }, []);
+
+  const clearNotificationLog = useCallback(() => setNotificationLog([]), []);
 
   const dismissNotification = useCallback((id: number) => {
     setNotifications((prev) => prev.filter((x) => x.id !== id));
@@ -94,22 +121,29 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const profile = MODE_PROFILE[settings.performanceMode];
     const tick = () => {
-      setStats((prev) => {
-        const cpuTarget = isGaming ? jitter(62, 18) * profile.cpuScale : isLaunching ? jitter(78, 10) : jitter(11, 8);
-        const gpuTarget = isGaming ? jitter(93, 8) * profile.gpuScale : isLaunching ? jitter(40, 20) : jitter(5, 5);
-        const ramTarget = isGaming ? jitter(64, 4) : isLaunching ? jitter(52, 4) : jitter(31, 3);
-        const fpsTarget = isGaming ? jitter(profile.fps * 0.94, profile.fps * 0.1) : 0;
-        const cpu = clamp(approach(prev.cpu, cpuTarget), 2);
-        const gpu = clamp(approach(prev.gpu, gpuTarget), 1);
-        return {
-          cpu,
-          gpu,
-          ram: clamp(approach(prev.ram, ramTarget), 10),
-          cpuTemp: Math.round(38 + cpu * 0.42 + profile.temp),
-          gpuTemp: Math.round(34 + gpu * 0.44 + profile.temp),
-          fps: isGaming ? Math.round(clamp(fpsTarget, 30, 400)) : 0,
-        };
-      });
+      const prev = statsRef.current;
+      const cpuTarget = isGaming ? jitter(62, 18) * profile.cpuScale : isLaunching ? jitter(78, 10) : jitter(11, 8);
+      const gpuTarget = isGaming ? jitter(93, 8) * profile.gpuScale : isLaunching ? jitter(40, 20) : jitter(5, 5);
+      const ramTarget = isGaming ? jitter(64, 4) : isLaunching ? jitter(52, 4) : jitter(31, 3);
+      const fpsTarget = isGaming ? jitter(profile.fps * 0.94, profile.fps * 0.1) : 0;
+      const cpu = clamp(approach(prev.cpu, cpuTarget), 2);
+      const gpu = clamp(approach(prev.gpu, gpuTarget), 1);
+      const ram = clamp(approach(prev.ram, ramTarget), 10);
+      const next: SystemStats = {
+        cpu,
+        gpu,
+        ram,
+        cpuTemp: Math.round(38 + cpu * 0.42 + profile.temp),
+        gpuTemp: Math.round(34 + gpu * 0.44 + profile.temp),
+        fps: isGaming ? Math.round(clamp(fpsTarget, 30, 400)) : 0,
+      };
+      statsRef.current = next;
+      setStats(next);
+      setHistory((h) => ({
+        cpu: [...h.cpu, cpu].slice(-HISTORY_LENGTH),
+        gpu: [...h.gpu, gpu].slice(-HISTORY_LENGTH),
+        ram: [...h.ram, ram].slice(-HISTORY_LENGTH),
+      }));
     };
     tick();
     const interval = window.setInterval(tick, 1500);
@@ -234,6 +268,7 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SystemContextValue>(
     () => ({
       stats,
+      history,
       bootTime,
       games,
       downloads,
@@ -244,11 +279,14 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       launchGame,
       stopGame,
       notifications,
+      notificationLog,
       notify,
       dismissNotification,
+      clearNotificationLog,
     }),
     [
       stats,
+      history,
       bootTime,
       games,
       downloads,
@@ -259,8 +297,10 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       launchGame,
       stopGame,
       notifications,
+      notificationLog,
       notify,
       dismissNotification,
+      clearNotificationLog,
     ],
   );
 

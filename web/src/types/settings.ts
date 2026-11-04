@@ -10,9 +10,18 @@ export interface Settings {
   performanceMode: PerformanceMode;
   showFpsOverlay: boolean;
   iconClickMode: IconClickMode;
+  showWidgets: boolean;
+  bootAnimation: boolean;
   masterVolume: number;
   gameVolume: number;
   chatVolume: number;
   muted: boolean;
   spatialAudio: boolean;
+  /** Quick settings (Control Center). */
+  wifiEnabled: boolean;
+  bluetoothEnabled: boolean;
+  doNotDisturb: boolean;
+  nightLight: boolean;
+  /** Display brightness, 30–100. */
+  brightness: number;
 }

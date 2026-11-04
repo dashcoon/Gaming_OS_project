@@ -11,6 +11,10 @@ export interface WindowManagerValue {
   toggleMaximize: (id: AppId) => void;
   minimizeAll: () => void;
   closeAll: () => void;
+  /** Shell actions. */
+  openSpotlight: () => void;
+  lockScreen: () => void;
+  restart: () => void;
 }
 
 /** Provided by <Desktop />, which owns the window manager state. */

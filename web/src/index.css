@@ -30,6 +30,11 @@ body,
   .glass-strong {
     @apply border border-slate-700/60 bg-slate-950/85 backdrop-blur-xl;
   }
+  /* Popovers nested inside an already-blurred surface (top bar, title bar): a nested
+     backdrop-filter can't blur what is behind the parent, so these are near-opaque. */
+  .popover {
+    @apply border border-slate-700/60 bg-[#0d1322] shadow-2xl;
+  }
   .glass-light {
     @apply border border-white/10 bg-white/5 backdrop-blur-md;
   }

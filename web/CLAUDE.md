@@ -10,6 +10,9 @@ This web UI lives in `web/` of the gaming-os repository; the repository root hol
 - `npm run build`: Type-check (`tsc --noEmit`) and production build
 - `npm run lint`: Run ESLint checks
 - `npm run preview`: Serve the production build
+- `npm run test:e2e`: End-to-end test in Chromium (run `npm run build` first; needs Playwright)
+
+Append `?session=desktop` to the URL to skip the boot and lock screens (`?session=lock` jumps to the lock screen).
 
 ## Tech Stack
 - **Framework**: React 18 + Vite
@@ -22,7 +25,7 @@ This web UI lives in `web/` of the gaming-os repository; the repository root hol
 ```text
 src/
 ├── components/
-│   ├── Desktop.tsx        # Window manager & desktop orchestrator (owns window state)
+│   ├── Desktop.tsx        # Window manager & desktop orchestrator (window state, session phase, shortcuts)
 │   ├── Dock.tsx           # Floating macOS-style application dock
 │   ├── Window.tsx         # Draggable/resizable window shell, traffic lights, snapping
 │   ├── TopBar.tsx         # Status bar: system menu, CPU/GPU/RAM, volume, battery, clock
@@ -31,6 +34,13 @@ src/
 │   ├── Notifications.tsx  # Toasts (downloads, achievements, now playing)
 │   ├── FpsOverlay.tsx     # In-game FPS overlay
 │   ├── AppIcon.tsx        # Gradient app tile used by dock and desktop
+│   ├── BootScreen.tsx     # Startup splash
+│   ├── LockScreen.tsx     # Sign-in screen with clock
+│   ├── Spotlight.tsx      # Ctrl+Space / Ctrl+K search: apps, games, actions, files
+│   ├── ControlCenter.tsx  # Quick settings + notification history (top bar)
+│   ├── Widgets.tsx        # Desktop widgets: system monitor, continue playing, friends
+│   ├── DesktopContextMenu.tsx # Right-click menu on the desktop
+│   ├── Sparkline.tsx      # Small auto-scaled area chart
 │   └── apps/
 │       ├── registry.ts         # AppId -> metadata + component
 │       ├── SteamClient.tsx     # Steam gaming client simulation
@@ -55,5 +65,8 @@ src/
 - **Adding an app**: add its id to `AppId` (`types/os.ts`), metadata to `data/apps.ts` (`APP_META`, `APP_ORDER`), and the component to `components/apps/registry.ts`. The dock, desktop icons and `launch <app>` pick it up automatically.
 - **Accent color**: use the `accent` / `accent-2` Tailwind colors (`bg-accent/20`, `text-accent`). They read the `--accent` RGB variables, so never hardcode the purple.
 - **Window geometry**: `position`/`size` on `WindowState` are the free-floating bounds and are kept while maximized or snapped; `effectiveBounds()` in `Window.tsx` computes what is on screen.
+- **Popovers inside blurred surfaces** (top-bar menus, title-bar flyouts, dock tooltips) use `.popover`, not `.glass`: a nested `backdrop-filter` can't blur what's behind its blurred parent, so a translucent popover shows content through it.
+- **Shell actions** (`openSpotlight`, `lockScreen`, `restart`) live on the window-manager context next to `openApp`.
+- **Tests**: `tests/e2e.cjs` covers the main flows; add a case there when you add a shell feature. CI runs it in `.github/workflows/web.yml`.
 - **Tailwind classes** must appear literally in source (no string-built class names), or the build drops them.
 - All game titles, studios and hardware stats are fictional/simulated.

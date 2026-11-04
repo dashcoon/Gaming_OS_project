@@ -21,7 +21,7 @@ type Section = 'appearance' | 'desktop' | 'performance' | 'sound';
 
 const SECTIONS: { id: Section; label: string; icon: LucideIcon }[] = [
   { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'desktop', label: 'Desktop & Dock', icon: Monitor },
+  { id: 'desktop', label: 'Desktop & Display', icon: Monitor },
   { id: 'performance', label: 'Performance', icon: Gauge },
   { id: 'sound', label: 'Sound', icon: Volume2 },
 ];
@@ -144,7 +144,7 @@ export default function SettingsApp() {
 
         {section === 'desktop' && (
           <>
-            <Heading title="Desktop & Dock" subtitle="How desktop icons and windows behave." />
+            <Heading title="Desktop & Display" subtitle="Desktop icons, widgets, display and window behavior." />
             <Group title="Desktop icons">
               <div className="grid gap-2 sm:grid-cols-2">
                 {(
@@ -164,10 +164,51 @@ export default function SettingsApp() {
                 ))}
               </div>
             </Group>
+            <Group title="Desktop">
+              <Toggle
+                label="Show widgets"
+                description="System monitor, continue playing and friends on the right of the desktop."
+                checked={settings.showWidgets}
+                onChange={(v) => updateSettings({ showWidgets: v })}
+              />
+              <Toggle
+                label="Boot animation"
+                description="Show the startup splash before the sign-in screen."
+                checked={settings.bootAnimation}
+                onChange={(v) => updateSettings({ bootAnimation: v })}
+              />
+            </Group>
+            <Group title="Display">
+              <Slider label="Brightness" value={settings.brightness} min={30} onChange={(v) => updateSettings({ brightness: v })} />
+              <Toggle
+                label="Night light"
+                description="Warmer colors to reduce eye strain late at night."
+                checked={settings.nightLight}
+                onChange={(v) => updateSettings({ nightLight: v })}
+              />
+            </Group>
+            <Group title="Keyboard shortcuts">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 rounded-lg bg-white/5 px-3 py-2.5 text-sm">
+                {[
+                  ['Ctrl Space / Ctrl K', 'Search apps, games and actions'],
+                  ['Ctrl Alt T', 'Open Terminal'],
+                  ['Ctrl Alt D', 'Show desktop'],
+                  ['Ctrl Alt L', 'Lock screen'],
+                ].map(([keys, action]) => (
+                  <div key={keys} className="contents">
+                    <dt>
+                      <kbd className="rounded border border-slate-600 bg-slate-900/60 px-1.5 py-0.5 font-mono text-[11px] text-slate-300">{keys}</kbd>
+                    </dt>
+                    <dd className="text-slate-400">{action}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Group>
             <Group title="Window snapping">
               <p className="text-sm leading-relaxed text-slate-400">
-                Drag a window to the top edge to maximize it, or to the left or right edge to snap it to half the
-                screen. Double-click a title bar to maximize or restore. Dragging a snapped window restores its size.
+                Drag a window to the top edge to maximize it, to the left or right edge to snap it to half the screen, or
+                into a corner for a quarter. Hover the green button for snap layouts. Double-click a title bar to
+                maximize or restore. Dragging a snapped window restores its size.
               </p>
             </Group>
           </>
@@ -313,11 +354,13 @@ function Toggle({
 function Slider({
   label,
   value,
+  min = 0,
   disabled,
   onChange,
 }: {
   label: string;
   value: number;
+  min?: number;
   disabled?: boolean;
   onChange: (value: number) => void;
 }) {
@@ -326,7 +369,7 @@ function Slider({
       <span className="w-24 shrink-0 text-sm">{label}</span>
       <input
         type="range"
-        min={0}
+        min={min}
         max={100}
         value={value}
         disabled={disabled}
