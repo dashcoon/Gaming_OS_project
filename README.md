@@ -14,6 +14,10 @@ Both work with AMD and Intel CPUs, desktops and laptops. Picked the wrong one? G
 - **No bloat, full hardware support:** `build_files/build.sh` removes extras a gaming PC doesn't need (Android container (or switches it off where other parts depend on it), VPN, web admin console, disc ripper, CJK input methods, Steam Deck-only parts) and adds drivers for a wide range of hardware (see [Drivers](#drivers)). A package is only removed when nothing else depends on it, so the gaming stack stays intact.
 - **Safe updates:** the system is image-based. GitHub rebuilds the image every day from the latest Bazzite, the PC updates in the background, and the previous version stays in the boot menu if an update misbehaves.
 
+## Web desktop demo
+
+[`web/`](web/) holds **GamingOS web**, a browser-based desktop UI (React, TypeScript, Tailwind, Vite) with Steam, Firefox, Terminal, File Explorer, Settings and About apps. It is separate from the Linux image and does not change the image build. To try it: `cd web && npm install && npm run dev`.
+
 ## Install
 
 You need a USB stick of 16 GB or more (it gets erased) and, for dual boot, free space or a second drive.

@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Accent colors are RGB triplets so Tailwind can apply opacity (bg-accent/20). */
+  --accent: 168 85 247;
+  --accent-2: 236 72 153;
+  --topbar-height: 32px;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #020617;
+  color: #e2e8f0;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  /* Core glass surface used by windows, dock and menus. */
+  .glass {
+    @apply border border-slate-700/50 bg-slate-900/80 backdrop-blur-md;
+  }
+  .glass-strong {
+    @apply border border-slate-700/60 bg-slate-950/85 backdrop-blur-xl;
+  }
+  .glass-light {
+    @apply border border-white/10 bg-white/5 backdrop-blur-md;
+  }
+  .accent-glow {
+    box-shadow:
+      0 0 0 1px rgb(var(--accent) / 0.35),
+      0 0 24px -4px rgb(var(--accent) / 0.55);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-accent {
+    @apply btn bg-accent text-white hover:bg-accent/85;
+  }
+  .btn-ghost {
+    @apply btn text-slate-300 hover:bg-white/10 hover:text-white;
+  }
+  .input {
+    @apply rounded-md border border-slate-700/60 bg-slate-950/60 px-3 py-1.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-accent/70 focus:ring-2 focus:ring-accent/25;
+  }
+}
+
+/* Thin scrollbars inside app windows. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(100 116 139 / 0.5) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgb(100 116 139 / 0.45);
+  border-radius: 9999px;
+}
+
+input[type='range'] {
+  accent-color: rgb(var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
